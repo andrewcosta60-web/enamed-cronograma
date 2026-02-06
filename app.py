@@ -30,7 +30,7 @@ st.markdown("""
         box-shadow: none;
     }
     
-    /* Input de Texto no Login */
+    /* Input de Texto */
     .stTextInput > div > div > input {
         border-radius: 10px;
     }
@@ -39,8 +39,13 @@ st.markdown("""
 
 # --- CONFIGURAÇÕES ---
 CSV_FILE = "enamed_data.csv"
-# COMEÇA VAZIO (Você deve cadastrar na tela inicial)
 DEFAULT_USERS = [] 
+
+# Lista de Avatares Disponíveis
+AVATARS = [
+    "👨‍⚕️", "👩‍⚕️", "🦉", "🧠", "🫀", "🧬", "🚑", "🏥", "💉", "💊", 
+    "🦠", "🩸", "🎓", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🚀", "💡", "🔥"
+]
 
 # --- FUNÇÕES ---
 
@@ -56,18 +61,13 @@ def get_users_from_df(df):
 def init_db():
     """Cria o arquivo CSV se não existir"""
     if not os.path.exists(CSV_FILE):
-        # Colunas base apenas com as tarefas
         cols = ["ID", "Semana", "Data_Alvo", "Tema", "Detalhes", "Link_Questões"]
-        
-        # Se houver usuários padrão, cria as colunas deles
         for user in DEFAULT_USERS:
             cols.extend([f"{user}_Status", f"{user}_Date"])
             
         df = pd.DataFrame(columns=cols)
         
-        # Dados iniciais de exemplo (Tarefas)
         initial_data = []
-        
         row1 = [1, "Semana 01", "2026-02-20", "Pediatria - Imunizações", "Foco: Calendário 0-15 meses.", ""]
         for _ in DEFAULT_USERS: row1.extend([False, None])
         initial_data.append(row1)
@@ -91,7 +91,7 @@ def save_data(df):
 def add_new_user(df, new_name):
     """Adiciona colunas para um novo usuário no DataFrame e Salva"""
     if f"{new_name}_Status" in df.columns:
-        return df, False, "Usuário já existe!"
+        return df, False, "Esse nome já existe!"
     
     # Cria as colunas
     df[f"{new_name}_Status"] = False
@@ -144,17 +144,30 @@ if "logged_user" not in st.session_state:
                         else:
                             st.warning("Selecione um usuário.")
 
-            # ABA DE CADASTRO
+            # ABA DE CADASTRO (COM SELEÇÃO DE EMOJI)
             with tab_register:
                 st.write("### Criar novo perfil")
-                new_user_name = st.text_input("Digite seu nome (Ex: Dr. João)")
+                
+                col_emoji, col_nome = st.columns([1, 3])
+                
+                with col_emoji:
+                    selected_avatar = st.selectbox("Avatar", AVATARS)
+                
+                with col_nome:
+                    input_name = st.text_input("Seu Nome (ex: Dr. João)")
+                
+                # Monta o nome final
+                final_name = f"{selected_avatar} {input_name}" if input_name else ""
+                
+                if input_name:
+                    st.caption(f"Como vai aparecer: **{final_name}**")
                 
                 if st.button("Salvar e Entrar"):
-                    if new_user_name and len(new_user_name) > 2:
-                        df, success, msg = add_new_user(df, new_user_name)
+                    if input_name and len(input_name) > 2:
+                        df, success, msg = add_new_user(df, final_name)
                         if success:
                             st.success(msg)
-                            st.session_state["logged_user"] = new_user_name
+                            st.session_state["logged_user"] = final_name
                             st.rerun()
                         else:
                             st.error(msg)
@@ -342,12 +355,11 @@ with tab3:
     st.divider()
     st.write("### 🚨 Zona de Perigo")
     
-    # BOTÃO PARA ZERAR TUDO (OPÇÃO 2 IMPLEMENTADA)
     if st.button("🗑️ ZERAR BANCO DE DADOS (Limpar Tudo)", type="primary"):
         if os.path.exists(CSV_FILE):
-            os.remove(CSV_FILE) # Deleta o arquivo
+            os.remove(CSV_FILE)
             for key in list(st.session_state.keys()):
-                del st.session_state[key] # Desloga todo mundo
+                del st.session_state[key]
             st.warning("Banco de dados apagado! Por favor, atualize a página (F5).")
         else:
             st.info("O banco de dados já está limpo.")
