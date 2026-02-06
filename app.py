@@ -7,7 +7,7 @@ import io
 import csv
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Enamed Diário", page_icon="🏥", layout="centered")
+st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="centered")
 
 # --- CSS GLOBAL ---
 st.markdown("""
@@ -45,7 +45,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
-CSV_FILE = "enamed_daily_db.csv" # Arquivo novo para a estrutura diária
+CSV_FILE = "enamed_daily_db.csv"
 DEFAULT_USERS = [] 
 
 # Avatares
@@ -54,7 +54,7 @@ AVATARS = [
     "🦠", "🩸", "🎓", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🚀", "💡", "🔥"
 ]
 
-# --- DADOS DO CRONOGRAMA DIÁRIO (CSV RAW) ---
+# --- DADOS DO CRONOGRAMA ---
 RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 20/02/2026,Sex,1,Pediatria,Imunizações (Calendário),15 Questões + Eng. Reversa
 21/02/2026,Sáb,1,Medicina Preventiva,Vigilância em Saúde,30 Questões + Sprint Semanal
@@ -459,36 +459,29 @@ tab1, tab2, tab3, tab4 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"
 with tab1:
     st.markdown("### 📅 Cronograma Diário")
     
-    # Agrupar por Semana
     semanas = sorted(df["Semana"].unique())
     
     for sem in semanas:
         df_week = df[df["Semana"] == sem]
         
-        # Calcular XP da Semana para o Cabeçalho
-        xp_semana_feito = 0
-        xp_semana_total = 0
-        
+        # Calcular XP
+        xp_feito = 0
+        xp_total = 0
         for idx, row in df_week.iterrows():
             if f"{current_user}_Status" in df.columns:
-                xp_semana_total += 100 # Cada tarefa vale 100 max
+                xp_total += 100
                 if row[f"{current_user}_Status"]:
-                    xp_semana_feito += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
+                    xp_feito += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
         
-        # Define se abre a primeira semana automaticamente
         start_open = (sem == 1)
         
-        # Expander com Pontuação Agregada
-        with st.expander(f"📍 Semana {sem:02d} — ({xp_semana_feito} / {xp_semana_total} XP)", expanded=start_open):
-            
-            # Loop pelos DIAS da semana
+        with st.expander(f"📍 Semana {sem:02d} — ({xp_feito} / {xp_total} XP)", expanded=start_open):
             for index, row in df_week.iterrows():
                 real_idx = df[df["ID"] == row["ID"]].index[0]
                 if f"{current_user}_Status" not in df.columns: st.rerun()
 
                 status = row[f"{current_user}_Status"]
                 data_gravada = row[f"{current_user}_Date"]
-                pontos = calculate_xp(row["Data_Alvo"], data_gravada)
                 
                 hoje = date.today()
                 try: 
@@ -509,7 +502,6 @@ with tab1:
                 tema_esc = html.escape(str(row['Tema']))
                 meta_esc = html.escape(str(row['Meta']))
 
-                # CARTÃO DO DIA
                 st.markdown(f"""
                 <div style="display: flex; gap: 10px; align-items: stretch; width: 100%; margin-bottom: 10px; font-family: 'Varela Round', sans-serif;">
                     <div style="flex: 0 0 80px; background-color: {bg_data}; border: 2px solid {b_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 5px; color: {t_data};">
@@ -526,26 +518,23 @@ with tab1:
                 </div>
                 """, unsafe_allow_html=True)
 
-                # AÇÕES DO DIA (CHECK + LINK)
                 c1, c2 = st.columns([4, 1])
                 with c1:
-                    with st.expander("🔗 Adicionar Link / Material"):
-                        current_link = row['Link_Questões']
-                        if current_link:
-                            st.markdown(f"**Link Salvo:** [{current_link}]({current_link})")
-                        new_link = st.text_input("Cole o link aqui:", key=f"l_{row['ID']}")
-                        if st.button("Salvar Link", key=f"s_{row['ID']}"):
-                            if new_link:
-                                df.at[real_idx, "Link_Questões"] = new_link
-                                save_data(df); st.success("Salvo!"); st.rerun()
+                    with st.expander("🔗 Adicionar Link"):
+                        cur_link = row['Link_Questões']
+                        if cur_link: st.markdown(f"**Link:** [{cur_link}]({cur_link})")
+                        nl = st.text_input("Novo Link:", key=f"l_{row['ID']}")
+                        if st.button("Salvar", key=f"s_{row['ID']}"):
+                            df.at[real_idx, "Link_Questões"] = nl
+                            save_data(df); st.success("Salvo!"); st.rerun()
                 with c2:
                     if status:
                         if st.button("Desfazer", key=f"r_{row['ID']}"):
                             df.at[real_idx, f"{current_user}_Status"] = False; save_data(df); st.rerun()
                     else:
                         lbl_btn = "Entregar" if hoje > d_alvo else "Concluir"
-                        type_btn = "secondary" if hoje > d_alvo else "primary"
-                        if st.button(lbl_btn, key=f"c_{row['ID']}", type=type_btn):
+                        t_btn = "secondary" if hoje > d_alvo else "primary"
+                        if st.button(lbl_btn, key=f"c_{row['ID']}", type=t_btn):
                             df.at[real_idx, f"{current_user}_Status"] = True
                             df.at[real_idx, f"{current_user}_Date"] = str(date.today())
                             save_data(df); st.rerun()
@@ -574,29 +563,52 @@ with tab2:
 
 # --- ABA 3: ADMIN ---
 with tab3:
-    st.warning("⚠️ Zona de Administração")
-    if st.button("🗑️ ZERAR BANCO DE DADOS (Reiniciar Cronograma)", type="primary"):
-        if os.path.exists(CSV_FILE):
-            os.remove(CSV_FILE)
-            for k in list(st.session_state.keys()): del st.session_state[k]
-            st.success("Sistema reiniciado! Atualize a página."); st.rerun()
+    st.header("⚙️ Administração")
+    
+    # Verifica autenticação
+    if "admin_unlocked" not in st.session_state:
+        st.session_state["admin_unlocked"] = False
+
+    if not st.session_state["admin_unlocked"]:
+        senha = st.text_input("Digite a senha de administrador:", type="password")
+        if senha == "UNIARP":
+            st.session_state["admin_unlocked"] = True
+            st.rerun()
+        elif senha:
+            st.error("Senha incorreta!")
+    
+    # Conteúdo Protegido
+    if st.session_state["admin_unlocked"]:
+        st.success("🔓 Acesso Liberado")
+        
+        if st.button("🗑️ ZERAR BANCO DE DADOS (Reiniciar Cronograma)", type="primary"):
+            if os.path.exists(CSV_FILE):
+                os.remove(CSV_FILE)
+                for k in list(st.session_state.keys()): del st.session_state[k]
+                st.success("Sistema reiniciado! Atualize a página."); st.rerun()
+        
+        st.divider()
+        if st.button("🔒 Sair do Modo Admin"):
+            st.session_state["admin_unlocked"] = False
+            st.rerun()
 
 # --- ABA 4: TUTORIAL ---
 with tab4:
     st.markdown("## 📚 Como Funciona o Enamed Diário")
     st.info("💡 **Dica:** O segredo é a consistência diária!")
     
-    st.markdown("### 1️⃣ Estrutura Diária")
-    st.markdown("""
-    O cronograma agora é dividido por **DIAS**.
-    1.  Clique na **Semana** para abrir a pasta.
-    2.  Você verá as tarefas de Segunda, Terça, etc.
-    3.  Cada dia tem sua própria meta (ex: 15 Questões).
-    """)
-    
-    st.markdown("### 2️⃣ Pontuação")
-    st.markdown("""
-    * **100 XP** por dia concluído no prazo.
-    * O topo da semana mostra a soma (ex: 300/600 XP).
-    * Tente fechar a semana com 100% de aproveitamento!
-    """)
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("### 1️⃣ Estrutura")
+        st.markdown("""
+        * **Semana:** Clique para abrir a pasta da semana.
+        * **Dia:** Veja a meta do dia (ex: 15 Questões).
+        * **Concluir:** Marque o check para ganhar XP.
+        """)
+    with col2:
+        st.markdown("### 2️⃣ Pontuação")
+        st.markdown("""
+        * **100 XP:** Feito no prazo (Verde).
+        * **50 XP:** Feito com atraso (Amarelo).
+        * **0 XP:** Pendente (Cinza).
+        """)
