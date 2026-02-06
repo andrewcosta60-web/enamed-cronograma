@@ -6,7 +6,7 @@ import os
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Game", page_icon="🦉", layout="centered")
 
-# --- CSS (ESTÉTICA CORRIGIDA) ---
+# --- CSS (ESTÉTICA) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -20,10 +20,10 @@ st.markdown("""
         background-color: #ffffff;
         border: 2px solid #e5e5e5;
         border-radius: 16px;
-        padding: 0px; /* Padding zero para controlar tudo dentro */
+        padding: 0px; 
         margin-bottom: 15px;
         box-shadow: 0 4px 0 #e5e5e5;
-        overflow: hidden; /* Garante que nada saia das bordas arredondadas */
+        overflow: hidden; 
     }
     
     /* Botões */
@@ -121,13 +121,11 @@ with tab1:
         data_gravada = row[f"{current_user}_Date"]
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
-        # Lógica de Cores
+        # Cores e Estilos
         hoje = date.today()
         data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
         
-        # Definindo estilos baseados no estado
         if status:
-            # FEITO (Verde Claro)
             cor_fundo_card = "#f7fff7"
             cor_borda = "#58cc02"
             cor_box_data = "transparent"
@@ -135,23 +133,21 @@ with tab1:
             label_data = "FEITO"
             icone_data = "✅"
         elif hoje > data_alvo_dt:
-            # ATRASADO (Branco com caixa amarela)
             cor_fundo_card = "#ffffff"
             cor_borda = "#e5e5e5"
-            cor_box_data = "#fff3cd" # Fundo Amarelo
-            cor_texto_data = "#856404" # Texto Amarelo Escuro
+            cor_box_data = "#fff3cd"
+            cor_texto_data = "#856404"
             label_data = "ATRASADO"
             icone_data = "⚠️"
         else:
-            # NO PRAZO (Padrão)
             cor_fundo_card = "#ffffff"
             cor_borda = "#e5e5e5"
-            cor_box_data = "#f0f0f0" # Cinza bem clarinho
+            cor_box_data = "#f8f9fa" # Cinza leve
             cor_texto_data = "#888888"
             label_data = "PRAZO"
             icone_data = "📅"
 
-        # HTML DO CARD (Com CSS Inline para garantir que não bugue)
+        # HTML DO CARD (AJUSTADO PARA NÃO BUGAR TEXTO)
         st.markdown(f"""
         <div style="
             background-color: {cor_fundo_card}; 
@@ -160,12 +156,12 @@ with tab1:
             margin-bottom: 10px; 
             box-shadow: 0 4px 0 #e5e5e5;
             display: flex;
-            align-items: stretch; /* Garante altura igual */
-            overflow: hidden;
+            align-items: stretch;
+            min-height: 80px; /* Garante altura mínima */
         ">
             <div style="
-                width: 90px;
-                min-width: 90px; 
+                width: 100px;
+                min-width: 100px; /* Largura fixa para a data */
                 background-color: {cor_box_data}; 
                 color: {cor_texto_data};
                 display: flex;
@@ -173,101 +169,9 @@ with tab1:
                 justify-content: center;
                 align-items: center;
                 text-align: center;
-                padding: 10px;
                 border-right: 1px solid #eee;
+                padding: 5px;
             ">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px;">{label_data}</div>
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px;">{label_data}</div>
                 <div style="font-size: 20px;">{icone_data}</div>
-                <div style="font-size: 14px; font-weight: bold;">{row['Data_Alvo'][5:]}</div>
-            </div>
-
-            <div style="flex-grow: 1; padding: 15px; display: flex; flex-direction: column; justify-content: center;">
-                <div style="font-size: 18px; font-weight: bold; color: #4b4b4b; line-height: 1.2;">
-                    {row['Tema']}
-                </div>
-                <div style="font-size: 13px; color: #777; margin-top: 4px;">
-                    {row['Detalhes']}
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        # LÓGICA DE AÇÕES (Abaixo do Card)
-        c1, c2 = st.columns([3, 1])
-        with c1:
-            with st.expander("📂 Acessar conteúdo extra"): 
-                if row['Link_Questões']: st.markdown(f"🔗 [Abrir Questões]({row['Link_Questões']})")
-                else: 
-                    nl = st.text_input("Link:", key=f"l_{row['ID']}")
-                    if st.button("Salvar", key=f"sl_{row['ID']}"):
-                        df.at[real_idx, "Link_Questões"] = nl
-                        save_data(df); st.rerun()
-        
-        with c2:
-            if status:
-                st.success(f"✅ FEITO! (+{pontos_garantidos})")
-                if st.button("🔄 Refazer", key=f"re_{row['ID']}"):
-                    df.at[real_idx, f"{current_user}_Status"] = False
-                    save_data(df); st.rerun()
-            else:
-                if pontos_garantidos > 0:
-                    if st.button("✅ Concluir", key=f"chk2_{row['ID']}"):
-                        df.at[real_idx, f"{current_user}_Status"] = True
-                        save_data(df); st.rerun()
-                    st.markdown(f"<div style='text-align:center; font-size:11px; color:#999;'>↺ XP: {pontos_garantidos}</div>", unsafe_allow_html=True)
-                else:
-                    hoje_str = str(date.today())
-                    atrasado = hoje > data_alvo_dt
-                    lbl = "Concluir" if not atrasado else "Entregar"
-                    btn_type = "primary" if not atrasado else "secondary"
-                    if st.button(lbl, key=f"chk_{row['ID']}", type=btn_type):
-                        df.at[real_idx, f"{current_user}_Status"] = True
-                        df.at[real_idx, f"{current_user}_Date"] = hoje_str
-                        save_data(df); st.balloons(); st.rerun()
-
-# ==========================================================
-# ABA 2: RANKING
-# ==========================================================
-with tab2:
-    st.subheader("🏆 Classificação")
-    placar = []
-    for u in USERS:
-        pts = 0
-        tasks = 0
-        for i, r in df.iterrows():
-            p = calculate_xp(r["Data_Alvo"], r[f"{u}_Date"])
-            if p > 0:
-                pts += p
-                tasks += 1
-        placar.append({"Médico": u, "XP": pts, "Tarefas": tasks})
-        
-    df_p = pd.DataFrame(placar).sort_values("XP", ascending=False).reset_index(drop=True)
-    
-    for i, row in df_p.iterrows():
-        medalha = ["🥇", "🥈", "🥉", ""][i] if i < 4 else ""
-        bg = "#fff5c2" if i == 0 else "#f9f9f9"
-        st.markdown(f"""
-        <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between;">
-            <div><span style="font-size:20px;">{medalha}</span> <b>{row['Médico']}</b></div>
-            <div style="text-align:right;"><b>{row['XP']} XP</b><br><small>{row['Tarefas']} lições</small></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-# ==========================================================
-# ABA 3: ADMIN
-# ==========================================================
-with tab3:
-    st.write("Adicionar Tarefa")
-    with st.form("add"):
-        c1, c2 = st.columns(2)
-        s = c1.text_input("Semana", value="Semana 02")
-        d = c2.date_input("Data")
-        t = st.text_input("Tema")
-        dt = st.text_input("Detalhes")
-        if st.form_submit_button("Salvar"):
-            nid = df["ID"].max() + 1 if not df.empty else 1
-            nrow = {"ID": nid, "Semana": s, "Data_Alvo": str(d), "Tema": t, "Detalhes": dt, "Link_Questões": ""}
-            for u in USERS:
-                nrow[f"{u}_Status"] = False; nrow[f"{u}_Date"] = None
-            df = pd.concat([df, pd.DataFrame([nrow])], ignore_index=True)
-            save_data(df); st.success("Ok!"); st.rerun()
+                <div style="font-size: 14px; font-weight: bold; margin-top: 2px;">{row['Data_Alvo'][5:]}</div>
