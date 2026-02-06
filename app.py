@@ -97,7 +97,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (ESTRUTURA DE DUAS CAIXAS REFEITA)
+# ABA 1: LIÇÕES (CAIXAS REFEITAS E BLINDADAS)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -115,44 +115,39 @@ with tab1:
         data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
         
         if status:
-            # FEITO (Verde)
-            cor_primaria = "#58cc02"
+            # FEITO
+            cor_borda = "#58cc02"
             bg_data = "#e6fffa" 
             texto_data = "#58cc02"
             label = "FEITO"
             icone = "✅"
         elif hoje > data_alvo_dt:
-            # ATRASADO (Amarelo)
-            cor_primaria = "#ffc800"
+            # ATRASADO
+            cor_borda = "#ffc800"
             bg_data = "#fff5d1"
             texto_data = "#d4a000"
             label = "ATRASADO"
             icone = "⚠️"
         else:
-            # NORMAL (Cinza)
-            cor_primaria = "#e5e5e5"
+            # NORMAL
+            cor_borda = "#e5e5e5"
             bg_data = "#f7f7f7"
             texto_data = "#afafaf"
             label = "PRAZO"
             icone = "📅"
 
-        # --- HTML BLINDADO: DUAS DIVS INDEPENDENTES ---
+        # --- HTML (REFEITO DO ZERO) ---
+        # Container Pai Flexivel
         st.markdown(f"""
-        <div style="
-            display: flex; 
-            flex-direction: row; 
-            align-items: stretch; 
-            width: 100%; 
-            margin-bottom: 15px; 
-            font-family: 'Varela Round', sans-serif;
-        ">
+        <div style="display: flex; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
+            
             <div style="
                 width: 100px;
-                min-width: 100px;
+                min-width: 100px; /* Garante tamanho fixo */
                 background-color: {bg_data};
-                border: 2px solid {cor_primaria};
+                border: 2px solid {cor_borda};
                 border-right: none; /* Remove borda direita para colar */
-                border-radius: 16px 0 0 16px; /* Arredonda só a esquerda */
+                border-radius: 16px 0 0 16px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -161,41 +156,31 @@ with tab1:
                 color: {texto_data};
                 text-align: center;
             ">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px;">{label}</div>
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 4px; letter-spacing: 1px;">{label}</div>
                 <div style="font-size: 20px;">{icone}</div>
-                <div style="font-size: 14px; font-weight: bold; margin-top: 5px;">{row['Data_Alvo'][5:]}</div>
+                <div style="font-size: 14px; font-weight: bold; margin-top: 4px;">{row['Data_Alvo'][5:]}</div>
             </div>
 
             <div style="
-                flex-grow: 1;
-                background-color: white;
-                border: 2px solid {cor_primaria};
-                border-left: 1px solid #eee; /* Uma linha fina para separar sutilmente */
-                border-radius: 0 16px 16px 0; /* Arredonda só a direita */
+                flex-grow: 1; /* Ocupa todo o resto do espaço */
+                background-color: white; /* Garante fundo branco */
+                border: 2px solid {cor_borda};
+                border-left: 1px solid #eee; /* Linha divisória sutil */
+                border-radius: 0 16px 16px 0;
                 padding: 15px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                min-width: 0; /* Impede que texto longo quebre o layout */
+                overflow: hidden; /* Evita vazamento */
             ">
-                <div style="
-                    font-size: 17px; 
-                    font-weight: bold; 
-                    color: #4b4b4b; 
-                    margin-bottom: 5px; 
-                    line-height: 1.2;
-                ">
+                <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.2;">
                     {row['Tema']}
                 </div>
-                <div style="
-                    font-size: 13px; 
-                    color: #888; 
-                    line-height: 1.4;
-                ">
+                <div style="font-size: 13px; color: #888; margin-top: 5px; line-height: 1.4;">
                     {row['Detalhes']}
                 </div>
             </div>
-            
+
         </div>
         """, unsafe_allow_html=True)
 
