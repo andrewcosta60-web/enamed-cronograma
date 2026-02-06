@@ -54,7 +54,6 @@ def init_db():
             "Dr. Carlos_Status", "Dr. Carlos_Date",
             "Dr. Daniel_Status", "Dr. Daniel_Date"
         ])
-        # Dados Iniciais
         initial_data = [
             [1, "Semana 01", "2026-02-20", "Pediatria - Imunizações", "Foco: Calendário 0-15 meses.", "", False, None, False, None, False, None, False, None],
             [2, "Semana 01", "2026-02-21", "Preventiva - Vigilância", "Notificação Compulsória.", "", False, None, False, None, False, None, False, None],
@@ -72,18 +71,14 @@ def save_data(df):
     df.to_csv(CSV_FILE, index=False)
 
 def calculate_xp(target, completed_at):
-    # Regra Anti-Roubo: Se tem data, tem ponto. Não importa o status atual.
     if pd.isna(completed_at) or str(completed_at) == "None" or str(completed_at) == "":
         return 0
     try:
         t = datetime.strptime(str(target), "%Y-%m-%d").date()
         c = datetime.strptime(str(completed_at), "%Y-%m-%d").date()
-        if c <= t:
-            return 100
-        else:
-            return 50
-    except:
-        return 0
+        if c <= t: return 100
+        else: return 50
+    except: return 0
 
 # --- INICIALIZAÇÃO ---
 st.title("🦉 Desafio Enamed")
@@ -105,7 +100,6 @@ with st.sidebar:
     
     st.divider()
     
-    # XP Total (Baseado nas datas gravadas, independente se está checkado ou não)
     total_xp = 0
     for idx, row in df.iterrows():
         total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
@@ -116,7 +110,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (COM TRAVA DE PONTUAÇÃO)
+# ABA 1: LIÇÕES
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -126,13 +120,10 @@ with tab1:
     for index, row in df_view.iterrows():
         real_idx = df[df["ID"] == row["ID"]].index[0]
         
-        status = row[f"{current_user}_Status"] # O check visual (True/False)
-        data_gravada = row[f"{current_user}_Date"] # A data oficial da pontuação
-        
-        # Se tem data gravada, a pontuação já existe
+        status = row[f"{current_user}_Status"]
+        data_gravada = row[f"{current_user}_Date"]
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
-        # Estilo do Card
         style = 'border-color: #58cc02; background-color: #f7fff7;' if status else ''
         
         with st.container():
@@ -153,7 +144,8 @@ with tab1:
 
             c1, c2 = st.columns([3, 1])
             with c1:
-                with st.expander("📖 Ver Link"):
+                # --- AQUI ESTÁ A MUDANÇA ---
+                with st.expander("📂 Acessar conteúdo extra"): 
                     if row['Link_Questões']: st.markdown(f"🔗 [Abrir Questões]({row['Link_Questões']})")
                     else: 
                         nl = st.text_input("Link:", key=f"l_{row['ID']}")
@@ -162,35 +154,26 @@ with tab1:
                             save_data(df); st.rerun()
             
             with c2:
-                # CENÁRIO 1: TAREFA JÁ CHECKADA
                 if status:
                     st.success(f"✅ FEITO!\n(+{pontos_garantidos})")
-                    # Botão Refazer: Apenas desmarca visualmente (Status=False), mas MANTÉM a Data
                     if st.button("🔄 Refazer", key=f"re_{row['ID']}", help="Praticar de novo. Seus pontos não mudam."):
                         df.at[real_idx, f"{current_user}_Status"] = False
-                        # NÃO apagamos a data! df.at[..., Date] continua o mesmo.
                         save_data(df); st.rerun()
 
-                # CENÁRIO 2: TAREFA ABERTA (CHECK VAZIO)
                 else:
-                    # Se já tem data gravada (foi feita antes), avisa que é REVISÃO
                     if pontos_garantidos > 0:
-                        st.caption(f"Revisando... (XP já garantido: {pontos_garantidos})")
+                        st.caption(f"Revisando... (XP: {pontos_garantidos})")
                         if st.button("✅ Concluir (De novo)", key=f"chk2_{row['ID']}"):
                             df.at[real_idx, f"{current_user}_Status"] = True
-                            # NÃO atualizamos a data, mantemos a original para não perder pontos
                             save_data(df); st.rerun()
-                    
-                    # Se nunca foi feita (Data vazia)
                     else:
                         hoje = str(date.today())
                         atrasado = hoje > row["Data_Alvo"]
                         lbl = "Concluir" if not atrasado else "Entregar (Atrasado)"
                         btn_type = "primary" if not atrasado else "secondary"
-                        
                         if st.button(lbl, key=f"chk_{row['ID']}", type=btn_type):
                             df.at[real_idx, f"{current_user}_Status"] = True
-                            df.at[real_idx, f"{current_user}_Date"] = hoje # Grava data pela 1ª vez
+                            df.at[real_idx, f"{current_user}_Date"] = hoje
                             save_data(df); st.balloons(); st.rerun()
 
 # ==========================================================
@@ -203,7 +186,6 @@ with tab2:
         pts = 0
         tasks = 0
         for i, r in df.iterrows():
-            # Conta pontos se tiver Data (independente do status checkado)
             p = calculate_xp(r["Data_Alvo"], r[f"{u}_Date"])
             if p > 0:
                 pts += p
@@ -228,8 +210,9 @@ with tab2:
 with tab3:
     st.write("Adicionar Tarefa")
     with st.form("add"):
-        s = st.text_input("Semana", value="Semana 02")
-        d = st.date_input("Data")
+        c1, c2 = st.columns(2)
+        s = c1.text_input("Semana", value="Semana 02")
+        d = c2.date_input("Data")
         t = st.text_input("Tema")
         dt = st.text_input("Detalhes")
         if st.form_submit_button("Salvar"):
