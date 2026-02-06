@@ -32,7 +32,7 @@ st.markdown("""
         border: none;
         box-shadow: 0 4px 0 rgba(0,0,0,0.2);
         transition: margin-top 0.1s, box-shadow 0.1s;
-        width: 100%; /* Botão ocupa largura total da coluna para alinhar melhor */
+        width: 100%;
     }
     .stButton > button:active {
         margin-top: 4px;
@@ -125,16 +125,32 @@ with tab1:
         data_gravada = row[f"{current_user}_Date"]
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
-        style = 'border-color: #58cc02; background-color: #f7fff7;' if status else ''
+        # --- LÓGICA DA CAIXA DE DATA AMARELA ---
+        hoje = date.today()
+        data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
+        
+        # Se NÃO FEZ (status False) E DATA JÁ PASSOU (hoje > alvo)
+        if not status and hoje > data_alvo_dt:
+            # Estilo Amarelo de Alerta
+            date_box_style = "background-color: #fff3cd; border: 2px solid #ffecb5; border-radius: 8px; color: #856404;"
+            date_label = "ATRASADO"
+        else:
+            # Estilo Normal
+            date_box_style = "border-right: 2px solid #eee;"
+            date_label = "PRAZO"
+        
+        # Borda verde no card se feito
+        card_style = 'border-color: #58cc02; background-color: #f7fff7;' if status else ''
         
         with st.container():
             st.markdown(f"""
-            <div class="task-card" style="{style}">
+            <div class="task-card" style="{card_style}">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="flex:1; text-align:center; border-right: 2px solid #eee;">
-                        <span style="font-size:12px; color:#888;">PRAZO</span><br>
-                        <b>{row['Data_Alvo'][5:]}</b>
+                    <div style="flex:1; text-align:center; padding: 5px; {date_box_style}">
+                        <span style="font-size:10px; opacity: 0.7;">{date_label}</span><br>
+                        <b style="font-size: 16px;">{row['Data_Alvo'][5:]}</b>
                     </div>
+                    
                     <div style="flex:4; padding-left:15px;">
                         <span style="font-size:18px; font-weight:bold; color:#4b4b4b;">{row['Tema']}</span><br>
                         <span style="font-size:14px; color:#777;">{row['Detalhes']}</span>
@@ -154,39 +170,33 @@ with tab1:
                             save_data(df); st.rerun()
             
             with c2:
-                # Caso 1: Já está feito (Mostra SUCESSO + Botão pequeno de Refazer)
                 if status:
                     st.success(f"✅ FEITO! (+{pontos_garantidos})")
                     if st.button("🔄 Refazer", key=f"re_{row['ID']}", help="Praticar de novo"):
                         df.at[real_idx, f"{current_user}_Status"] = False
                         save_data(df); st.rerun()
 
-                # Caso 2: Não está feito (Botão de ação)
                 else:
-                    # Se já tem XP garantido (Revisão)
                     if pontos_garantidos > 0:
-                        # 1. BOTÃO PRIMEIRO (Fica na área padrão)
                         if st.button("✅ Concluir (De novo)", key=f"chk2_{row['ID']}"):
                             df.at[real_idx, f"{current_user}_Status"] = True
                             save_data(df); st.rerun()
                         
-                        # 2. TEXTO PEQUENO EMBAIXO
                         st.markdown(f"""
                             <div style="text-align:center; font-size:11px; color:#999; margin-top:-5px;">
                                 ↺ Revisando (XP: {pontos_garantidos})
                             </div>
                         """, unsafe_allow_html=True)
 
-                    # Se nunca fez (Primeira vez)
                     else:
-                        hoje = str(date.today())
-                        atrasado = hoje > row["Data_Alvo"]
-                        lbl = "Concluir" if not atrasado else "Entregar (Atrasado)"
+                        hoje_str = str(date.today())
+                        atrasado = hoje > data_alvo_dt
+                        lbl = "Concluir" if not atrasado else "Entregar"
                         btn_type = "primary" if not atrasado else "secondary"
                         
                         if st.button(lbl, key=f"chk_{row['ID']}", type=btn_type):
                             df.at[real_idx, f"{current_user}_Status"] = True
-                            df.at[real_idx, f"{current_user}_Date"] = hoje
+                            df.at[real_idx, f"{current_user}_Date"] = hoje_str
                             save_data(df); st.balloons(); st.rerun()
 
 # ==========================================================
