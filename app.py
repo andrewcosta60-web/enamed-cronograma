@@ -97,7 +97,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (ALINHAMENTO PERFEITO)
+# ABA 1: LIÇÕES (GRID SYSTEM)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -115,80 +115,94 @@ with tab1:
         data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
         
         # Cores Padrão (Tema)
-        cor_tema_bg = "#ffffff"
-        cor_tema_border = "#e5e5e5"
+        bg_tema = "#ffffff"
+        border_tema = "#e5e5e5"
         
         if status:
             # FEITO
-            cor_data_border = "#58cc02"
-            cor_data_bg = "#e6fffa" 
-            cor_data_text = "#58cc02"
+            border_data = "#58cc02"
+            bg_data = "#e6fffa" 
+            text_data = "#58cc02"
             label = "FEITO"
             icone = "✅"
-            cor_tema_border = "#58cc02" 
+            border_tema = "#58cc02"
         elif hoje > data_alvo_dt:
             # ATRASADO
-            cor_data_border = "#ffc800"
-            cor_data_bg = "#fff5d1"
-            cor_data_text = "#d4a000"
+            border_data = "#ffc800"
+            bg_data = "#fff5d1"
+            text_data = "#d4a000"
             label = "ATRASADO"
             icone = "⚠️"
-            cor_tema_border = "#ffc800"
+            border_tema = "#ffc800"
         else:
             # NORMAL
-            cor_data_border = "#e5e5e5"
-            cor_data_bg = "#f7f7f7"
-            cor_data_text = "#afafaf"
+            border_data = "#e5e5e5"
+            bg_data = "#f7f7f7"
+            text_data = "#afafaf"
             label = "PRAZO"
             icone = "📅"
 
-        # --- CAIXAS SEPARADAS E ALINHADAS (HTML) ---
-        # Aqui usamos 'align-items: stretch' para garantir altura igual
+        # --- HTML CSS GRID (GABARITADO) ---
+        # Grid garante que as colunas tenham a mesma altura
         st.markdown(f"""
         <div style="
-            display: flex; 
-            gap: 12px; /* Espaço entre as caixas */
-            align-items: stretch; /* O Segredo do Alinhamento */
-            margin-bottom: 10px;
+            display: grid; 
+            grid-template-columns: 90px 1fr; /* Coluna 1 fixa, Coluna 2 ocupa o resto */
+            gap: 12px; 
+            width: 100%; 
+            margin-bottom: 15px; 
             font-family: 'Varela Round', sans-serif;
         ">
             <div style="
-                flex: 0 0 100px; /* Largura fixa */
-                background-color: {cor_data_bg};
-                border: 2px solid {cor_data_border};
-                border-radius: 12px;
+                background-color: {bg_data};
+                border: 2px solid {border_data};
+                border-radius: 16px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
                 text-align: center;
-                padding: 10px;
-                color: {cor_data_text};
+                color: {text_data};
+                padding: 5px;
+                height: 100%; /* Ocupa altura total do grid */
+                box-sizing: border-box; /* Garante que a borda não aumente o tamanho */
                 box-shadow: 0 4px 0 rgba(0,0,0,0.05);
             ">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">{label}</div>
-                <div style="font-size: 24px;">{icone}</div>
-                <div style="font-size: 14px; font-weight: bold; margin-top: 5px;">{row['Data_Alvo'][5:]}</div>
+                <div style="font-size: 9px; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px;">{label}</div>
+                <div style="font-size: 18px; margin-bottom: 2px;">{icone}</div>
+                <div style="font-size: 13px; font-weight: bold;">{row['Data_Alvo'][5:]}</div>
             </div>
 
             <div style="
-                flex: 1; /* Ocupa o resto */
-                background-color: {cor_tema_bg};
-                border: 2px solid {cor_tema_border};
-                border-radius: 12px;
+                background-color: {bg_tema};
+                border: 2px solid {border_tema};
+                border-radius: 16px;
+                padding: 12px 15px;
                 display: flex;
                 flex-direction: column;
-                justify-content: center; /* Centraliza verticalmente */
-                padding: 15px;
+                justify-content: center;
+                height: 100%; /* Ocupa altura total do grid */
+                box-sizing: border-box;
                 box-shadow: 0 4px 0 rgba(0,0,0,0.05);
             ">
-                <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.2;">
+                <div style="
+                    font-size: 16px; 
+                    font-weight: bold; 
+                    color: #4b4b4b; 
+                    margin-bottom: 4px; 
+                    line-height: 1.2;
+                ">
                     {row['Tema']}
                 </div>
-                <div style="font-size: 13px; color: #888; margin-top: 5px; line-height: 1.4;">
+                <div style="
+                    font-size: 12px; 
+                    color: #888; 
+                    line-height: 1.4;
+                ">
                     {row['Detalhes']}
                 </div>
             </div>
+            
         </div>
         """, unsafe_allow_html=True)
 
