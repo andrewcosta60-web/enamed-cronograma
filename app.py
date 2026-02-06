@@ -6,7 +6,7 @@ import os
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Game", page_icon="🦉", layout="centered")
 
-# --- CSS (ESTILO DUOLINGO / CLEAN) ---
+# --- CSS GLOBAL ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -15,7 +15,7 @@ st.markdown("""
         font-family: 'Varela Round', sans-serif;
     }
     
-    /* Botões */
+    /* Botões Padrão */
     .stButton > button {
         border-radius: 12px;
         font-weight: bold;
@@ -97,7 +97,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (LAYOUT "DUAS CAIXAS COLADAS")
+# ABA 1: LIÇÕES (ESTRUTURA DE DUAS CAIXAS REFEITA)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -110,77 +110,92 @@ with tab1:
         data_gravada = row[f"{current_user}_Date"]
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
-        # Cores e Lógica de Status
+        # --- DEFINIÇÃO DE CORES ---
         hoje = date.today()
         data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
         
         if status:
-            # FEITO: Borda Verde, Caixa Data Verde
-            cor_borda = "#58cc02"
-            bg_data = "#e6fffa" # Verde bem clarinho
-            cor_texto_data = "#58cc02"
-            label_data = "FEITO"
-            icone_data = "✅"
+            # FEITO (Verde)
+            cor_primaria = "#58cc02"
+            bg_data = "#e6fffa" 
+            texto_data = "#58cc02"
+            label = "FEITO"
+            icone = "✅"
         elif hoje > data_alvo_dt:
-            # ATRASADO: Borda Amarela, Caixa Data Amarela
-            cor_borda = "#ffc800"
-            bg_data = "#fff5d1" # Amarelo clarinho
-            cor_texto_data = "#d4a000"
-            label_data = "ATRASADO"
-            icone_data = "⚠️"
+            # ATRASADO (Amarelo)
+            cor_primaria = "#ffc800"
+            bg_data = "#fff5d1"
+            texto_data = "#d4a000"
+            label = "ATRASADO"
+            icone = "⚠️"
         else:
-            # PRAZO: Borda Cinza, Caixa Data Cinza
-            cor_borda = "#e5e5e5"
+            # NORMAL (Cinza)
+            cor_primaria = "#e5e5e5"
             bg_data = "#f7f7f7"
-            cor_texto_data = "#afafaf"
-            label_data = "PRAZO"
-            icone_data = "📅"
+            texto_data = "#afafaf"
+            label = "PRAZO"
+            icone = "📅"
 
-        # --- HTML BLINDADO (DUAS CAIXAS) ---
+        # --- HTML BLINDADO: DUAS DIVS INDEPENDENTES ---
         st.markdown(f"""
-        <div style="display: flex; align-items: stretch; margin-bottom: 12px; font-family: 'Varela Round', sans-serif;">
-            
+        <div style="
+            display: flex; 
+            flex-direction: row; 
+            align-items: stretch; 
+            width: 100%; 
+            margin-bottom: 15px; 
+            font-family: 'Varela Round', sans-serif;
+        ">
             <div style="
-                width: 90px;
-                min-width: 90px;
+                width: 100px;
+                min-width: 100px;
                 background-color: {bg_data};
-                border: 2px solid {cor_borda};
-                border-right: none; /* Cola na outra caixa */
-                border-top-left-radius: 16px;
-                border-bottom-left-radius: 16px;
+                border: 2px solid {cor_primaria};
+                border-right: none; /* Remove borda direita para colar */
+                border-radius: 16px 0 0 16px; /* Arredonda só a esquerda */
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
+                padding: 10px;
+                color: {texto_data};
                 text-align: center;
-                padding: 5px;
-                color: {cor_texto_data};
             ">
-                <div style="font-size: 10px; font-weight: bold; letter-spacing: 1px;">{label_data}</div>
-                <div style="font-size: 18px; margin: 2px 0;">{icone_data}</div>
-                <div style="font-size: 14px; font-weight: bold;">{row['Data_Alvo'][5:]}</div>
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px;">{label}</div>
+                <div style="font-size: 20px;">{icone}</div>
+                <div style="font-size: 14px; font-weight: bold; margin-top: 5px;">{row['Data_Alvo'][5:]}</div>
             </div>
 
             <div style="
                 flex-grow: 1;
                 background-color: white;
-                border: 2px solid {cor_borda};
-                border-left: 1px solid #eee; /* Divisória sutil */
-                border-top-right-radius: 16px;
-                border-bottom-right-radius: 16px;
+                border: 2px solid {cor_primaria};
+                border-left: 1px solid #eee; /* Uma linha fina para separar sutilmente */
+                border-radius: 0 16px 16px 0; /* Arredonda só a direita */
                 padding: 15px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
+                min-width: 0; /* Impede que texto longo quebre o layout */
             ">
-                <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.3;">
+                <div style="
+                    font-size: 17px; 
+                    font-weight: bold; 
+                    color: #4b4b4b; 
+                    margin-bottom: 5px; 
+                    line-height: 1.2;
+                ">
                     {row['Tema']}
                 </div>
-                <div style="font-size: 13px; color: #777; margin-top: 5px; line-height: 1.4;">
+                <div style="
+                    font-size: 13px; 
+                    color: #888; 
+                    line-height: 1.4;
+                ">
                     {row['Detalhes']}
                 </div>
             </div>
-
+            
         </div>
         """, unsafe_allow_html=True)
 
@@ -206,7 +221,7 @@ with tab1:
                     if st.button("✅ Concluir", key=f"chk2_{row['ID']}"):
                         df.at[real_idx, f"{current_user}_Status"] = True
                         save_data(df); st.rerun()
-                    st.markdown(f"<div style='text-align:center; font-size:11px; color:#999;'>↺ XP: {pontos_garantidos}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='text-align:center; font-size:11px; color:#999; font-family:Varela Round;'>↺ XP: {pontos_garantidos}</div>", unsafe_allow_html=True)
                 else:
                     hoje_str = str(date.today())
                     atrasado = hoje > data_alvo_dt
