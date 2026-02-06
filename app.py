@@ -29,15 +29,16 @@ st.markdown("""
         box-shadow: none;
     }
     
-    /* Classe para as Caixas (Estilo Unificado) */
+    /* Classe para as Caixas (Estilo Unificado e Alinhado) */
     .info-box {
         border-radius: 12px;
-        padding: 10px;
-        box-shadow: 0 4px 0 rgba(0,0,0,0.1);
-        height: 100%; /* Tenta alinhar altura */
+        padding: 15px;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.05);
+        height: 100%; /* Força altura total */
+        min-height: 110px; /* Altura mínima igual para ambos */
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: center; /* Centraliza conteúdo verticalmente */
     }
     </style>
 """, unsafe_allow_html=True)
@@ -108,7 +109,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (CAIXAS SEPARADAS)
+# ABA 1: LIÇÕES (CAIXAS SEPARADAS E ALINHADAS)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -136,8 +137,7 @@ with tab1:
             cor_data_text = "#58cc02"
             label = "FEITO"
             icone = "✅"
-            # Opcional: Deixar a borda do tema verde também se quiser indicar sucesso geral
-            cor_tema_border = "#58cc02" 
+            cor_tema_border = "#58cc02" # Borda verde também no tema
         elif hoje > data_alvo_dt:
             # ATRASADO
             cor_data_border = "#ffc800"
@@ -155,7 +155,6 @@ with tab1:
             icone = "📅"
 
         # --- LAYOUT EM COLUNAS (SEPARADAS) ---
-        # Usamos colunas nativas do Streamlit para evitar que o HTML se misture
         col_data, col_tema = st.columns([1, 3])
         
         with col_data:
@@ -164,10 +163,9 @@ with tab1:
                 background-color: {cor_data_bg};
                 border: 2px solid {cor_data_border};
                 text-align: center;
-                min-height: 100px; /* Altura fixa para ficar bonito */
                 color: {cor_data_text};
             ">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">{label}</div>
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px;">{label}</div>
                 <div style="font-size: 24px;">{icone}</div>
                 <div style="font-size: 14px; font-weight: bold; margin-top: 5px;">{row['Data_Alvo'][5:]}</div>
             </div>
@@ -178,7 +176,6 @@ with tab1:
             <div class="info-box" style="
                 background-color: {cor_tema_bg};
                 border: 2px solid {cor_tema_border};
-                min-height: 100px; /* Mesma altura da data */
             ">
                 <div style="font-size: 18px; font-weight: bold; color: #4b4b4b; line-height: 1.2;">
                     {row['Tema']}
