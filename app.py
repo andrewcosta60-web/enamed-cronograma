@@ -32,6 +32,7 @@ st.markdown("""
         border: none;
         box-shadow: 0 4px 0 rgba(0,0,0,0.2);
         transition: margin-top 0.1s, box-shadow 0.1s;
+        width: 100%; /* Botão ocupa largura total da coluna para alinhar melhor */
     }
     .stButton > button:active {
         margin-top: 4px;
@@ -144,7 +145,6 @@ with tab1:
 
             c1, c2 = st.columns([3, 1])
             with c1:
-                # --- AQUI ESTÁ A MUDANÇA ---
                 with st.expander("📂 Acessar conteúdo extra"): 
                     if row['Link_Questões']: st.markdown(f"🔗 [Abrir Questões]({row['Link_Questões']})")
                     else: 
@@ -154,23 +154,36 @@ with tab1:
                             save_data(df); st.rerun()
             
             with c2:
+                # Caso 1: Já está feito (Mostra SUCESSO + Botão pequeno de Refazer)
                 if status:
-                    st.success(f"✅ FEITO!\n(+{pontos_garantidos})")
-                    if st.button("🔄 Refazer", key=f"re_{row['ID']}", help="Praticar de novo. Seus pontos não mudam."):
+                    st.success(f"✅ FEITO! (+{pontos_garantidos})")
+                    if st.button("🔄 Refazer", key=f"re_{row['ID']}", help="Praticar de novo"):
                         df.at[real_idx, f"{current_user}_Status"] = False
                         save_data(df); st.rerun()
 
+                # Caso 2: Não está feito (Botão de ação)
                 else:
+                    # Se já tem XP garantido (Revisão)
                     if pontos_garantidos > 0:
-                        st.caption(f"Revisando... (XP: {pontos_garantidos})")
+                        # 1. BOTÃO PRIMEIRO (Fica na área padrão)
                         if st.button("✅ Concluir (De novo)", key=f"chk2_{row['ID']}"):
                             df.at[real_idx, f"{current_user}_Status"] = True
                             save_data(df); st.rerun()
+                        
+                        # 2. TEXTO PEQUENO EMBAIXO
+                        st.markdown(f"""
+                            <div style="text-align:center; font-size:11px; color:#999; margin-top:-5px;">
+                                ↺ Revisando (XP: {pontos_garantidos})
+                            </div>
+                        """, unsafe_allow_html=True)
+
+                    # Se nunca fez (Primeira vez)
                     else:
                         hoje = str(date.today())
                         atrasado = hoje > row["Data_Alvo"]
                         lbl = "Concluir" if not atrasado else "Entregar (Atrasado)"
                         btn_type = "primary" if not atrasado else "secondary"
+                        
                         if st.button(lbl, key=f"chk_{row['ID']}", type=btn_type):
                             df.at[real_idx, f"{current_user}_Status"] = True
                             df.at[real_idx, f"{current_user}_Date"] = hoje
