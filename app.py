@@ -97,7 +97,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (VISUAL GABARITADO)
+# ABA 1: LIÇÕES (CAIXAS ALINHADAS/STRETCH)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -110,11 +110,11 @@ with tab1:
         data_gravada = row[f"{current_user}_Date"]
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
-        # --- DEFINIÇÃO DE CORES ---
+        # --- CORES E STATUS ---
         hoje = date.today()
         data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
         
-        # Cores Padrão (Tema)
+        # Cores Base
         bg_tema = "#ffffff"
         border_tema = "#e5e5e5"
         
@@ -125,8 +125,7 @@ with tab1:
             text_data = "#58cc02"
             label = "FEITO"
             icone = "✅"
-            # Opcional: deixar a caixa do tema verde também? (Vamos manter cinza para destacar a data)
-            border_tema = "#58cc02"
+            border_tema = "#58cc02" # Borda do tema fica verde tb pra combinar
         elif hoje > data_alvo_dt:
             # ATRASADO
             border_data = "#ffc800"
@@ -143,63 +142,52 @@ with tab1:
             label = "PRAZO"
             icone = "📅"
 
-        # --- HTML PERFEITO: CAIXAS SEPARADAS MAS ALINHADAS ---
-        # Usamos display: flex e gap: 10px para separar visualmente, mas manter alinhamento
+        # --- HTML ESTRUTURAL (FLEXBOX ALINHADO) ---
         st.markdown(f"""
         <div style="
             display: flex; 
             flex-direction: row; 
-            gap: 12px; /* O ESPAÇO ENTRE AS CAIXAS */
-            align-items: stretch; /* ISSO GARANTE A MESMA ALTURA */
+            gap: 12px; /* Espaço entre as caixas */
+            align-items: stretch; /* O SEGREDO: Estica as caixas para mesma altura */
             width: 100%; 
             margin-bottom: 15px; 
             font-family: 'Varela Round', sans-serif;
         ">
             <div style="
-                flex: 0 0 100px; /* Largura fixa */
+                flex: 0 0 100px; /* Largura fixa 100px */
                 background-color: {bg_data};
                 border: 2px solid {border_data};
-                border-radius: 16px; /* Borda redonda completa */
+                border-radius: 16px;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                padding: 10px;
-                color: {text_data};
                 text-align: center;
-                box-shadow: 0 2px 0 rgba(0,0,0,0.05);
+                color: {text_data};
+                padding: 10px;
+                box-shadow: 0 4px 0 rgba(0,0,0,0.05);
             ">
                 <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px;">{label}</div>
-                <div style="font-size: 20px;">{icone}</div>
+                <div style="font-size: 22px;">{icone}</div>
                 <div style="font-size: 14px; font-weight: bold; margin-top: 5px;">{row['Data_Alvo'][5:]}</div>
             </div>
 
             <div style="
-                flex: 1; /* Cresce para ocupar o resto */
+                flex: 1; /* Ocupa o resto do espaço */
                 background-color: {bg_tema};
                 border: 2px solid {border_tema};
-                border-radius: 16px; /* Borda redonda completa */
+                border-radius: 16px;
                 padding: 15px;
                 display: flex;
                 flex-direction: column;
-                justify-content: center;
-                box-shadow: 0 2px 0 rgba(0,0,0,0.05);
-                min-width: 0; /* Evita quebra de layout */
+                justify-content: center; /* Centraliza o texto verticalmente */
+                box-shadow: 0 4px 0 rgba(0,0,0,0.05);
+                min-width: 0; /* Impede quebra de layout */
             ">
-                <div style="
-                    font-size: 17px; 
-                    font-weight: bold; 
-                    color: #4b4b4b; 
-                    margin-bottom: 5px; 
-                    line-height: 1.2;
-                ">
+                <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.25; margin-bottom: 6px;">
                     {row['Tema']}
                 </div>
-                <div style="
-                    font-size: 13px; 
-                    color: #888; 
-                    line-height: 1.4;
-                ">
+                <div style="font-size: 13px; color: #888; line-height: 1.4;">
                     {row['Detalhes']}
                 </div>
             </div>
@@ -207,7 +195,7 @@ with tab1:
         </div>
         """, unsafe_allow_html=True)
 
-        # LÓGICA DE AÇÕES
+        # LÓGICA DE AÇÕES (Botões embaixo)
         c1, c2 = st.columns([3, 1])
         with c1:
             with st.expander("📂 Acessar conteúdo extra"): 
@@ -240,7 +228,7 @@ with tab1:
                         df.at[real_idx, f"{current_user}_Date"] = hoje_str
                         save_data(df); st.balloons(); st.rerun()
         
-        st.write("") # Espaço Extra
+        st.write("") # Espaço extra entre tarefas
 
 # ==========================================================
 # ABA 2: RANKING
