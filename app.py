@@ -41,6 +41,31 @@ st.markdown("""
     .stProgress > div > div > div > div {
         background-color: #58cc02;
     }
+    
+    /* Caixas de Texto Estilizadas */
+    .info-box {
+        background-color: #e3f2fd;
+        border-left: 5px solid #2196f3;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+    .warning-box {
+        background-color: #fff3e0;
+        border-left: 5px solid #ff9800;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+    
+    /* Metrics Box */
+    div[data-testid="stMetric"] {
+        background-color: #f9f9f9;
+        border: 1px solid #e0e0e0;
+        padding: 10px;
+        border-radius: 10px;
+        text-align: center;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -453,6 +478,45 @@ with st.sidebar:
 
 st.title("🏥 Desafio Enamed")
 
+# --- PAINEL DE BORDO (DASHBOARD) ---
+# Lógica para identificar a semana atual e progresso
+today = date.today()
+df['dt_obj'] = pd.to_datetime(df['Data_Alvo']).dt.date
+
+# 1. Identificar Semana Atual
+future_tasks = df[df['dt_obj'] >= today]
+if df['dt_obj'].min() > today:
+    status_cronograma = "Pré-Edital (Aguardando)"
+elif future_tasks.empty:
+    status_cronograma = "Concluído 🏆"
+else:
+    # Pega a semana da tarefa mais próxima de hoje (ou de hoje mesmo)
+    prox_semana = future_tasks.iloc[0]['Semana']
+    status_cronograma = f"Semana {prox_semana:02d}"
+
+# 2. Calcular Progresso Total
+total_tasks = len(df)
+tasks_done = 0
+if f"{current_user}_Status" in df.columns:
+    tasks_done = df[f"{current_user}_Status"].sum()
+
+pct_completo = (tasks_done / total_tasks) if total_tasks > 0 else 0
+
+# 3. Exibir Métricas
+st.divider()
+col_dash1, col_dash2, col_dash3 = st.columns(3)
+with col_dash1:
+    st.metric("📅 Hoje", today.strftime("%d/%m/%Y"))
+with col_dash2:
+    st.metric("📍 Cronograma", status_cronograma)
+with col_dash3:
+    st.metric("🚀 Concluído", f"{int(pct_completo * 100)}%")
+
+st.progress(pct_completo)
+st.caption(f"Você completou **{tasks_done}** de **{total_tasks}** atividades previstas no ano.")
+st.divider()
+
+# --- ABAS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin", "🔰 Tutorial"])
 
 # --- ABA 1: LIÇÕES (FEED DIÁRIO) ---
@@ -592,23 +656,44 @@ with tab3:
             st.session_state["admin_unlocked"] = False
             st.rerun()
 
-# --- ABA 4: TUTORIAL ---
+# --- ABA 4: TUTORIAL (ATUALIZADA) ---
 with tab4:
-    st.markdown("## 📚 Como Funciona o Enamed Diário")
-    st.info("💡 **Dica:** O segredo é a consistência diária!")
+    st.markdown("## 📚 Manual do Usuário Enamed")
+    
+    st.markdown("""
+    <div class="warning-box">
+    <strong>⚠️ PRÉ-REQUISITO OBRIGATÓRIO</strong><br>
+    Este aplicativo é um <strong>GUIA DE ESTUDOS</strong> e <strong>TRACKER DE METAS</strong>. Ele não contém as aulas em si.<br><br>
+    Para estudar, você deve ter acesso ao <strong>Drive do Estratégia MED</strong> (ou seu material de preferência) contendo os PDFs e Vídeos das aulas citadas no cronograma.
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    st.markdown("### 🧠 Metodologia de Estudo")
+    st.markdown("""
+    Nossa abordagem é baseada em **Engenharia Reversa** e **Estudo Ativo**. Esqueça assistir 4 horas de aula passivamente!
+    
+    1.  **⚡ Sprint Teórico (20% do tempo):** Leia o resumo ou mapa mental do tema do dia no Drive. Entenda o básico.
+    2.  **📝 Questões (80% do tempo):** Vá para o banco de questões e faça a meta do dia (ex: 15 questões).
+    3.  **🔄 Engenharia Reversa:** O mais importante! Para cada questão que você errar (ou chutar), leia o comentário detalhado e entenda *por que* errou. Anote o conceito chave.
+    """)
+
+    st.divider()
+
+    st.markdown("### 📱 Fluxo de Uso do App")
+    st.markdown("""
+    1.  **Abra o App:** Faça login com seu Avatar.
+    2.  **Verifique a Meta:** Vá na aba "Lições", abra a Semana atual e veja a tarefa do dia (ex: *Pediatria - Imunizações*).
+    3.  **Estude:** Vá até o seu Drive/Material, encontre a aula correspondente e estude seguindo a metodologia acima.
+    4.  **Registre o Link (Opcional):** Se achar um resumo top ou o link direto da pasta, clique em *🔗 Adicionar Link* no app e cole lá para facilitar seu acesso futuro (e dos colegas).
+    5.  **Conclua:** Volte ao app e clique em **✅ Concluir**. Pronto! Seus 100 XP estão garantidos.
+    """)
+    
+    st.divider()
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("### 1️⃣ Estrutura")
-        st.markdown("""
-        * **Semana:** Clique para abrir a pasta da semana.
-        * **Dia:** Veja a meta do dia (ex: 15 Questões).
-        * **Concluir:** Marque o check para ganhar XP.
-        """)
+        st.info("📅 **Prazo:** Tente cumprir a meta no dia correto para ganhar pontuação máxima (Verde).")
     with col2:
-        st.markdown("### 2️⃣ Pontuação")
-        st.markdown("""
-        * **100 XP:** Feito no prazo (Verde).
-        * **50 XP:** Feito com atraso (Amarelo).
-        * **0 XP:** Pendente (Cinza).
-        """)
+        st.warning("🐢 **Atrasos:** Se fizer depois do prazo, a tarefa fica Amarela e vale metade dos pontos.")
