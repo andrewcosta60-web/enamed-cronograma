@@ -302,7 +302,7 @@ with tab1:
         st.write("") 
 
 # ==========================================================
-# ABA 2: RANKING
+# ABA 2: RANKING (CORRIGIDO PARA TEXTO PRETO)
 # ==========================================================
 with tab2:
     st.subheader("🏆 Classificação")
@@ -324,8 +324,10 @@ with tab2:
     for i, row in df_p.iterrows():
         medalha = ["🥇", "🥈", "🥉", ""][i] if i < 4 else ""
         bg = "#fff5c2" if i == 0 else "#f9f9f9"
+        
+        # Adicionei 'color: black' no estilo do div principal
         st.markdown(f"""
-        <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; font-family: 'Varela Round', sans-serif;">
+        <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; font-family: 'Varela Round', sans-serif; color: black;">
             <div><span style="font-size:20px;">{medalha}</span> <b>{row['Médico']}</b></div>
             <div style="text-align:right;"><b>{row['XP']} XP</b><br><small>{row['Tarefas']} lições</small></div>
         </div>
