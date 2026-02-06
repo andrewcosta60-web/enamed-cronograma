@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, date
 import os
+import html  # Importante para evitar bugs de texto
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Game", page_icon="🦉", layout="centered")
@@ -97,7 +98,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (GRID SYSTEM)
+# ABA 1: LIÇÕES (CORREÇÃO DE BUG HTML)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -112,9 +113,12 @@ with tab1:
         
         # --- DEFINIÇÃO DE CORES ---
         hoje = date.today()
-        data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
+        try:
+            data_alvo_dt = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
+        except:
+            data_alvo_dt = date.today() # Fallback
         
-        # Cores Padrão (Tema)
+        # Cores
         bg_tema = "#ffffff"
         border_tema = "#e5e5e5"
         
@@ -142,18 +146,26 @@ with tab1:
             label = "PRAZO"
             icone = "📅"
 
-        # --- HTML CSS GRID (GABARITADO) ---
-        # Grid garante que as colunas tenham a mesma altura
-        st.markdown(f"""
+        # --- LIMPEZA DE TEXTO (EVITA BUG DE CÓDIGO) ---
+        # Usamos html.escape para garantir que nenhum caractere estranho quebre o HTML
+        tema_limpo = html.escape(str(row['Tema']))
+        detalhes_limpo = html.escape(str(row['Detalhes']))
+        data_formatada = str(row['Data_Alvo'])[5:]
+
+        # --- HTML BLINDADO ---
+        card_html = f"""
         <div style="
-            display: grid; 
-            grid-template-columns: 90px 1fr; /* Coluna 1 fixa, Coluna 2 ocupa o resto */
+            display: flex; 
+            flex-direction: row; 
             gap: 12px; 
+            align-items: stretch; 
             width: 100%; 
-            margin-bottom: 15px; 
+            margin-bottom: 10px; 
             font-family: 'Varela Round', sans-serif;
+            box-sizing: border-box;
         ">
             <div style="
+                flex: 0 0 95px;
                 background-color: {bg_data};
                 border: 2px solid {border_data};
                 border-radius: 16px;
@@ -164,47 +176,36 @@ with tab1:
                 text-align: center;
                 color: {text_data};
                 padding: 5px;
-                height: 100%; /* Ocupa altura total do grid */
-                box-sizing: border-box; /* Garante que a borda não aumente o tamanho */
-                box-shadow: 0 4px 0 rgba(0,0,0,0.05);
+                box-shadow: 0 2px 0 rgba(0,0,0,0.05);
             ">
-                <div style="font-size: 9px; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px;">{label}</div>
-                <div style="font-size: 18px; margin-bottom: 2px;">{icone}</div>
-                <div style="font-size: 13px; font-weight: bold;">{row['Data_Alvo'][5:]}</div>
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px;">{label}</div>
+                <div style="font-size: 20px; margin-bottom: 2px;">{icone}</div>
+                <div style="font-size: 13px; font-weight: bold;">{data_formatada}</div>
             </div>
 
             <div style="
+                flex: 1;
                 background-color: {bg_tema};
                 border: 2px solid {border_tema};
                 border-radius: 16px;
-                padding: 12px 15px;
+                padding: 10px 15px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                height: 100%; /* Ocupa altura total do grid */
-                box-sizing: border-box;
-                box-shadow: 0 4px 0 rgba(0,0,0,0.05);
+                box-shadow: 0 2px 0 rgba(0,0,0,0.05);
+                min-width: 0;
             ">
-                <div style="
-                    font-size: 16px; 
-                    font-weight: bold; 
-                    color: #4b4b4b; 
-                    margin-bottom: 4px; 
-                    line-height: 1.2;
-                ">
-                    {row['Tema']}
+                <div style="font-size: 16px; font-weight: bold; color: #4b4b4b; margin-bottom: 4px; line-height: 1.2;">
+                    {tema_limpo}
                 </div>
-                <div style="
-                    font-size: 12px; 
-                    color: #888; 
-                    line-height: 1.4;
-                ">
-                    {row['Detalhes']}
+                <div style="font-size: 12px; color: #888; line-height: 1.4;">
+                    {detalhes_limpo}
                 </div>
             </div>
-            
         </div>
-        """, unsafe_allow_html=True)
+        """
+        
+        st.markdown(card_html, unsafe_allow_html=True)
 
         # LÓGICA DE AÇÕES
         c1, c2 = st.columns([3, 1])
