@@ -41,6 +41,22 @@ st.markdown("""
     .stProgress > div > div > div > div {
         background-color: #58cc02;
     }
+    
+    /* Caixas de Texto Estilizadas */
+    .info-box {
+        background-color: #e3f2fd;
+        border-left: 5px solid #2196f3;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
+    .warning-box {
+        background-color: #fff3e0;
+        border-left: 5px solid #ff9800;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -522,7 +538,7 @@ with tab1:
                 with c1:
                     with st.expander("🔗 Adicionar Link"):
                         cur_link = row['Link_Questões']
-                        if cur_link: st.markdown(f"**Link:** [{cur_link}]({cur_link})")
+                        if cur_link: st.markdown(f"**Link:** [{cur_link}]({current_link})")
                         nl = st.text_input("Novo Link:", key=f"l_{row['ID']}")
                         if st.button("Salvar", key=f"s_{row['ID']}"):
                             df.at[real_idx, "Link_Questões"] = nl
@@ -564,51 +580,65 @@ with tab2:
 # --- ABA 3: ADMIN ---
 with tab3:
     st.header("⚙️ Administração")
-    
-    # Verifica autenticação
-    if "admin_unlocked" not in st.session_state:
-        st.session_state["admin_unlocked"] = False
+    if "admin_unlocked" not in st.session_state: st.session_state["admin_unlocked"] = False
 
     if not st.session_state["admin_unlocked"]:
         senha = st.text_input("Digite a senha de administrador:", type="password")
         if senha == "UNIARP":
             st.session_state["admin_unlocked"] = True
             st.rerun()
-        elif senha:
-            st.error("Senha incorreta!")
+        elif senha: st.error("Senha incorreta!")
     
-    # Conteúdo Protegido
     if st.session_state["admin_unlocked"]:
         st.success("🔓 Acesso Liberado")
-        
         if st.button("🗑️ ZERAR BANCO DE DADOS (Reiniciar Cronograma)", type="primary"):
             if os.path.exists(CSV_FILE):
                 os.remove(CSV_FILE)
                 for k in list(st.session_state.keys()): del st.session_state[k]
                 st.success("Sistema reiniciado! Atualize a página."); st.rerun()
-        
         st.divider()
-        if st.button("🔒 Sair do Modo Admin"):
+        if st.button("🔒 Sair"):
             st.session_state["admin_unlocked"] = False
             st.rerun()
 
-# --- ABA 4: TUTORIAL ---
+# --- ABA 4: TUTORIAL (ATUALIZADA) ---
 with tab4:
-    st.markdown("## 📚 Como Funciona o Enamed Diário")
-    st.info("💡 **Dica:** O segredo é a consistência diária!")
+    st.markdown("## 📚 Manual do Usuário Enamed")
+    
+    st.markdown("""
+    <div class="warning-box">
+    <strong>⚠️ PRÉ-REQUISITO OBRIGATÓRIO</strong><br>
+    Este aplicativo é um <strong>GUIA DE ESTUDOS</strong> e <strong>TRACKER DE METAS</strong>. Ele não contém as aulas em si.<br><br>
+    Para estudar, você deve ter acesso ao <strong>Drive do Estratégia MED</strong> (ou seu material de preferência) contendo os PDFs e Vídeos das aulas citadas no cronograma.
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    st.markdown("### 🧠 Metodologia de Estudo")
+    st.markdown("""
+    Nossa abordagem é baseada em **Engenharia Reversa** e **Estudo Ativo**. Esqueça assistir 4 horas de aula passivamente!
+    
+    1.  **⚡ Sprint Teórico (20% do tempo):** Leia o resumo ou mapa mental do tema do dia no Drive. Entenda o básico.
+    2.  **📝 Questões (80% do tempo):** Vá para o banco de questões e faça a meta do dia (ex: 15 questões).
+    3.  **🔄 Engenharia Reversa:** O mais importante! Para cada questão que você errar (ou chutar), leia o comentário detalhado e entenda *por que* errou. Anote o conceito chave.
+    """)
+
+    st.divider()
+
+    st.markdown("### 📱 Fluxo de Uso do App")
+    st.markdown("""
+    1.  **Abra o App:** Faça login com seu Avatar.
+    2.  **Verifique a Meta:** Vá na aba "Lições", abra a Semana atual e veja a tarefa do dia (ex: *Pediatria - Imunizações*).
+    3.  **Estude:** Vá até o seu Drive/Material, encontre a aula correspondente e estude seguindo a metodologia acima.
+    4.  **Registre o Link (Opcional):** Se achar um resumo top ou o link direto da pasta, clique em *🔗 Adicionar Link* no app e cole lá para facilitar seu acesso futuro (e dos colegas).
+    5.  **Conclua:** Volte ao app e clique em **✅ Concluir**. Pronto! Seus 100 XP estão garantidos.
+    """)
+    
+    st.divider()
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("### 1️⃣ Estrutura")
-        st.markdown("""
-        * **Semana:** Clique para abrir a pasta da semana.
-        * **Dia:** Veja a meta do dia (ex: 15 Questões).
-        * **Concluir:** Marque o check para ganhar XP.
-        """)
+        st.info("📅 **Prazo:** Tente cumprir a meta no dia correto para ganhar pontuação máxima (Verde).")
     with col2:
-        st.markdown("### 2️⃣ Pontuação")
-        st.markdown("""
-        * **100 XP:** Feito no prazo (Verde).
-        * **50 XP:** Feito com atraso (Amarelo).
-        * **0 XP:** Pendente (Cinza).
-        """)
+        st.warning("🐢 **Atrasos:** Se fizer depois do prazo, a tarefa fica Amarela e vale metade dos pontos.")
