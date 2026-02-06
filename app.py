@@ -125,7 +125,8 @@ if "logged_user" not in st.session_state:
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns([1, 6, 1])
         with c2:
-            st.image("https://d35aaqx5ub95lt.cloudfront.net/images/leagues/0e3ed60b2999bed9b757e7eb22f300c1.svg", width=120)
+            # AQUI: Substituí a imagem quebrada por um Emoji Grande
+            st.markdown("<h1 style='text-align: center;'>🦉</h1>", unsafe_allow_html=True)
             st.title("Desafio Enamed")
             
             tab_login, tab_register = st.tabs(["🔑 Entrar", "➕ Novo Participante"])
@@ -179,9 +180,10 @@ if "logged_user" not in st.session_state:
 # --- APP PRINCIPAL ---
 current_user = st.session_state["logged_user"]
 
-# --- SIDEBAR ---
+# --- SIDEBAR (BARRA LATERAL) ---
 with st.sidebar:
-    st.image("https://d35aaqx5ub95lt.cloudfront.net/images/leagues/0e3ed60b2999bed9b757e7eb22f300c1.svg", width=100)
+    # AQUI TAMBÉM: Substituí a imagem quebrada pelo Emoji
+    st.markdown("# 🦉") 
     st.markdown(f"### Olá, **{current_user}**! 👋")
     
     if st.button("Sair"):
@@ -302,7 +304,7 @@ with tab1:
         st.write("") 
 
 # ==========================================================
-# ABA 2: RANKING (CORRIGIDO PARA TEXTO PRETO)
+# ABA 2: RANKING
 # ==========================================================
 with tab2:
     st.subheader("🏆 Classificação")
@@ -325,7 +327,6 @@ with tab2:
         medalha = ["🥇", "🥈", "🥉", ""][i] if i < 4 else ""
         bg = "#fff5c2" if i == 0 else "#f9f9f9"
         
-        # Adicionei 'color: black' no estilo do div principal
         st.markdown(f"""
         <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; font-family: 'Varela Round', sans-serif; color: black;">
             <div><span style="font-size:20px;">{medalha}</span> <b>{row['Médico']}</b></div>
