@@ -7,9 +7,10 @@ import io
 import csv
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="centered")
+st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="wide") 
+# Mudei layout para "wide" para caber o título e as caixas lado a lado
 
-# --- CSS GLOBAL ---
+# --- CSS GLOBAL (CORRIGIDO PARA CONTRASTE E TAMANHO) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -37,34 +38,55 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* Barra de Progresso Customizada */
+    /* Barra de Progresso */
     .stProgress > div > div > div > div {
         background-color: #58cc02;
     }
     
-    /* Caixas de Texto Estilizadas */
-    .info-box {
-        background-color: #e3f2fd;
-        border-left: 5px solid #2196f3;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 10px;
+    /* === CORREÇÃO DAS CAIXAS DE MÉTRICAS (DASHBOARD) === */
+    .dash-card {
+        background-color: #f0f2f6; /* Fundo Cinza Claro */
+        border-radius: 10px;
+        padding: 10px;
+        text-align: center;
+        border: 1px solid #dcdcdc;
+        height: 100%;
     }
-    .warning-box {
-        background-color: #fff3e0;
-        border-left: 5px solid #ff9800;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 10px;
+    .dash-label {
+        font-size: 12px !important;
+        font-weight: bold !important;
+        color: #555555 !important; /* Texto Cinza Escuro (Sempre visível) */
+        margin-bottom: 2px;
+        text-transform: uppercase;
+    }
+    .dash-value {
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        color: #000000 !important; /* Texto Preto (Sempre visível) */
     }
     
-    /* Metrics Box */
-    div[data-testid="stMetric"] {
-        background-color: #f9f9f9;
-        border: 1px solid #e0e0e0;
-        padding: 10px;
+    /* Título Personalizado para alinhar com as caixas */
+    .custom-title {
+        font-size: 40px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        padding-bottom: 0px;
+        line-height: 1.2;
+    }
+    
+    /* Caixa de XP na Sidebar */
+    .xp-box {
+        background-color: #262730;
+        border: 1px solid #444;
         border-radius: 10px;
+        padding: 15px;
         text-align: center;
+        margin-top: 10px;
+    }
+    .xp-val {
+        font-size: 32px;
+        font-weight: bold;
+        color: #58cc02;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -469,66 +491,83 @@ with st.sidebar:
         del st.session_state["logged_user"]
         st.query_params.clear()
         st.rerun()
+    
     st.divider()
+    
+    # Cálculo de XP
     total_xp = 0
     for idx, row in df.iterrows():
         if f"{current_user}_Date" in df.columns:
             total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
-    st.metric("💎 XP Total", f"{total_xp}")
+    
+    # Caixa XP Personalizada (Visível no Dark Mode)
+    st.markdown(f"""
+    <div class="xp-box">
+        <div style="font-size: 14px; color: #aaa;">💎 XP Total</div>
+        <div class="xp-val">{total_xp}</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-st.title("🏥 Desafio Enamed")
-
-# --- PAINEL DE BORDO (DASHBOARD) ---
-# Lógica para identificar a semana atual e progresso
+# --- LAYOUT DO TOPO (TÍTULO + DASHBOARD) ---
+# Cálculo de Métricas
 today = date.today()
 df['dt_obj'] = pd.to_datetime(df['Data_Alvo']).dt.date
 
-# 1. Identificar Semana Atual
+# 1. Identificar Semana
 future_tasks = df[df['dt_obj'] >= today]
 if df['dt_obj'].min() > today:
-    status_cronograma = "Pré-Edital (Aguardando)"
+    status_cronograma = "Pré-Edital"
 elif future_tasks.empty:
-    status_cronograma = "Concluído 🏆"
+    status_cronograma = "Concluído"
 else:
-    # Pega a semana da tarefa mais próxima de hoje (ou de hoje mesmo)
     prox_semana = future_tasks.iloc[0]['Semana']
     status_cronograma = f"Semana {prox_semana:02d}"
 
-# 2. Calcular Progresso Total
+# 2. Calcular Progresso
 total_tasks = len(df)
 tasks_done = 0
 if f"{current_user}_Status" in df.columns:
     tasks_done = df[f"{current_user}_Status"].sum()
+pct_completo = (tasks_done / total_tasks) * 100 if total_tasks > 0 else 0
 
-pct_completo = (tasks_done / total_tasks) if total_tasks > 0 else 0
+# 3. Renderizar (Grid 2 colunas: Título | Dashboard)
+c_title, c_dash = st.columns([1.5, 2.5])
 
-# 3. Exibir Métricas
-st.divider()
-col_dash1, col_dash2, col_dash3 = st.columns(3)
-with col_dash1:
-    st.metric("📅 Hoje", today.strftime("%d/%m/%Y"))
-with col_dash2:
-    st.metric("📍 Cronograma", status_cronograma)
-with col_dash3:
-    st.metric("🚀 Concluído", f"{int(pct_completo * 100)}%")
+with c_title:
+    st.markdown("<div class='custom-title'>🏥 Desafio<br>Enamed</div>", unsafe_allow_html=True)
 
-st.progress(pct_completo)
+with c_dash:
+    # Pequenas cartas HTML lado a lado
+    st.markdown(f"""
+    <div style="display: flex; gap: 10px; height: 100%; align-items: center;">
+        <div class="dash-card" style="flex: 1;">
+            <div class="dash-label">📅 Hoje</div>
+            <div class="dash-value">{today.strftime("%d/%m")}</div>
+        </div>
+        <div class="dash-card" style="flex: 1;">
+            <div class="dash-label">📍 Cronograma</div>
+            <div class="dash-value">{status_cronograma}</div>
+        </div>
+        <div class="dash-card" style="flex: 1;">
+            <div class="dash-label">🚀 Concluído</div>
+            <div class="dash-value">{int(pct_completo)}%</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.progress(int(pct_completo) / 100)
 st.caption(f"Você completou **{tasks_done}** de **{total_tasks}** atividades previstas no ano.")
 st.divider()
 
 # --- ABAS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin", "🔰 Tutorial"])
 
-# --- ABA 1: LIÇÕES (FEED DIÁRIO) ---
+# --- ABA 1: LIÇÕES ---
 with tab1:
     st.markdown("### 📅 Cronograma Diário")
-    
     semanas = sorted(df["Semana"].unique())
-    
     for sem in semanas:
         df_week = df[df["Semana"] == sem]
-        
-        # Calcular XP
         xp_feito = 0
         xp_total = 0
         for idx, row in df_week.iterrows():
@@ -538,21 +577,17 @@ with tab1:
                     xp_feito += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
         
         start_open = (sem == 1)
-        
         with st.expander(f"📍 Semana {sem:02d} — ({xp_feito} / {xp_total} XP)", expanded=start_open):
             for index, row in df_week.iterrows():
                 real_idx = df[df["ID"] == row["ID"]].index[0]
                 if f"{current_user}_Status" not in df.columns: st.rerun()
 
                 status = row[f"{current_user}_Status"]
-                data_gravada = row[f"{current_user}_Date"]
-                
                 hoje = date.today()
                 try: 
                     d_alvo = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
                     d_br = d_alvo.strftime("%d/%m")
-                except: 
-                    d_alvo = date.today(); d_br = "--/--"
+                except: d_alvo = date.today(); d_br = "--/--"
                 
                 bg_tema, border_tema = "#ffffff", "#e5e5e5"
                 if status:
@@ -628,35 +663,24 @@ with tab2:
 # --- ABA 3: ADMIN ---
 with tab3:
     st.header("⚙️ Administração")
-    
-    # Verifica autenticação
-    if "admin_unlocked" not in st.session_state:
-        st.session_state["admin_unlocked"] = False
-
+    if "admin_unlocked" not in st.session_state: st.session_state["admin_unlocked"] = False
     if not st.session_state["admin_unlocked"]:
-        senha = st.text_input("Digite a senha de administrador:", type="password")
+        senha = st.text_input("Senha:", type="password")
         if senha == "UNIARP":
-            st.session_state["admin_unlocked"] = True
-            st.rerun()
-        elif senha:
-            st.error("Senha incorreta!")
+            st.session_state["admin_unlocked"] = True; st.rerun()
+        elif senha: st.error("Senha incorreta!")
     
-    # Conteúdo Protegido
     if st.session_state["admin_unlocked"]:
-        st.success("🔓 Acesso Liberado")
-        
-        if st.button("🗑️ ZERAR BANCO DE DADOS (Reiniciar Cronograma)", type="primary"):
+        st.success("🔓 Liberado")
+        if st.button("🗑️ RESETAR TUDO", type="primary"):
             if os.path.exists(CSV_FILE):
                 os.remove(CSV_FILE)
                 for k in list(st.session_state.keys()): del st.session_state[k]
-                st.success("Sistema reiniciado! Atualize a página."); st.rerun()
-        
-        st.divider()
-        if st.button("🔒 Sair do Modo Admin"):
-            st.session_state["admin_unlocked"] = False
-            st.rerun()
+                st.rerun()
+        if st.button("🔒 Sair"):
+            st.session_state["admin_unlocked"] = False; st.rerun()
 
-# --- ABA 4: TUTORIAL (ATUALIZADA) ---
+# --- ABA 4: TUTORIAL ---
 with tab4:
     st.markdown("## 📚 Manual do Usuário Enamed")
     
