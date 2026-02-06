@@ -259,4 +259,14 @@ with tab3:
     st.write("Adicionar Tarefa")
     with st.form("add"):
         c1, c2 = st.columns(2)
-        s = c1.
+        s = c1.text_input("Semana", value="Semana 02")
+        d = c2.date_input("Data")
+        t = st.text_input("Tema")
+        dt = st.text_input("Detalhes")
+        if st.form_submit_button("Salvar"):
+            nid = df["ID"].max() + 1 if not df.empty else 1
+            nrow = {"ID": nid, "Semana": s, "Data_Alvo": str(d), "Tema": t, "Detalhes": dt, "Link_Questões": ""}
+            for u in USERS:
+                nrow[f"{u}_Status"] = False; nrow[f"{u}_Date"] = None
+            df = pd.concat([df, pd.DataFrame([nrow])], ignore_index=True)
+            save_data(df); st.success("Ok!"); st.rerun()
