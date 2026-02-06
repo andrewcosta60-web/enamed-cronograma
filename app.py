@@ -47,6 +47,11 @@ AVATARS = [
     "🦠", "🩸", "🎓", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🚀", "💡", "🔥"
 ]
 
+# Dicionário para traduzir dias da semana
+DIAS_PT = {
+    0: "Seg", 1: "Ter", 2: "Qua", 3: "Qui", 4: "Sex", 5: "Sáb", 6: "Dom"
+}
+
 # --- FUNÇÕES ---
 
 def get_users_from_df(df):
@@ -125,7 +130,6 @@ if "logged_user" not in st.session_state:
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns([1, 6, 1])
         with c2:
-            # CORUJA GIGANTE NO LOGIN TAMBÉM
             st.markdown("<div style='text-align: center; font-size: 80px;'>🦉</div>", unsafe_allow_html=True)
             st.markdown("<h1 style='text-align: center;'>Desafio Enamed</h1>", unsafe_allow_html=True)
             
@@ -145,7 +149,7 @@ if "logged_user" not in st.session_state:
                         else:
                             st.warning("Selecione um usuário.")
 
-            # ABA DE CADASTRO (COM SELEÇÃO DE EMOJI)
+            # ABA DE CADASTRO
             with tab_register:
                 st.write("### Criar novo perfil")
                 
@@ -157,7 +161,6 @@ if "logged_user" not in st.session_state:
                 with col_nome:
                     input_name = st.text_input("Seu Nome (ex: Dr. João)")
                 
-                # Monta o nome final
                 final_name = f"{selected_avatar} {input_name}" if input_name else ""
                 
                 if input_name:
@@ -182,9 +185,7 @@ current_user = st.session_state["logged_user"]
 
 # --- SIDEBAR (BARRA LATERAL) ---
 with st.sidebar:
-    # --- AQUI: AUMENTAMOS A CORUJA PARA 100PX ---
     st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🦉</div>", unsafe_allow_html=True)
-    
     st.markdown(f"### Olá, **{current_user}**! 👋")
     
     if st.button("Sair"):
@@ -224,8 +225,17 @@ with tab1:
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
         hoje = date.today()
-        try: data_alvo_dt = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
-        except: data_alvo_dt = date.today()
+        # Tratamento da Data e Dia da Semana
+        try: 
+            data_alvo_dt = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
+            # Formata para DD/MM
+            data_br = data_alvo_dt.strftime("%d/%m")
+            # Pega o dia da semana traduzido
+            dia_semana = DIAS_PT[data_alvo_dt.weekday()]
+        except: 
+            data_alvo_dt = date.today()
+            data_br = "--/--"
+            dia_semana = "---"
         
         bg_tema = "#ffffff"
         border_tema = "#e5e5e5"
@@ -253,14 +263,15 @@ with tab1:
 
         tema_txt = html.escape(str(row['Tema']))
         detalhes_txt = html.escape(str(row['Detalhes']))
-        data_txt = str(row['Data_Alvo'])[5:]
 
+        # --- HTML ATUALIZADO (DIA DA SEMANA + DATA BR) ---
         html_content = f"""
 <div style="display: flex; gap: 15px; align-items: stretch; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
 <div style="flex: 0 0 100px; background-color: {bg_data}; border: 2px solid {border_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; color: {text_data}; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
-<div style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">{label}</div>
-<div style="font-size: 24px;">{icone}</div>
-<div style="font-size: 14px; font-weight: bold; margin-top: 5px;">{data_txt}</div>
+<div style="font-size: 10px; font-weight: bold; margin-bottom: 2px;">{label}</div>
+<div style="font-size: 20px; margin-bottom: 2px;">{icone}</div>
+<div style="font-size: 12px; font-weight: bold;">{dia_semana}</div>
+<div style="font-size: 14px; font-weight: bold;">{data_br}</div>
 </div>
 <div style="flex: 1; background-color: {bg_tema}; border: 2px solid {border_tema}; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
 <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.2; margin-bottom: 5px;">{tema_txt}</div>
@@ -305,7 +316,7 @@ with tab1:
         st.write("") 
 
 # ==========================================================
-# ABA 2: RANKING (CORRIGIDO PARA TEXTO PRETO)
+# ABA 2: RANKING
 # ==========================================================
 with tab2:
     st.subheader("🏆 Classificação")
@@ -328,7 +339,6 @@ with tab2:
         medalha = ["🥇", "🥈", "🥉", ""][i] if i < 4 else ""
         bg = "#fff5c2" if i == 0 else "#f9f9f9"
         
-        # Adicionei 'color: black' no estilo do div principal
         st.markdown(f"""
         <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; font-family: 'Varela Round', sans-serif; color: black;">
             <div><span style="font-size:20px;">{medalha}</span> <b>{row['Médico']}</b></div>
