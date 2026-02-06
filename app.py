@@ -7,7 +7,7 @@ import io
 import csv
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="centered")
+st.set_page_config(page_title="Enamed Diário", page_icon="🏥", layout="centered")
 
 # --- CSS GLOBAL ---
 st.markdown("""
@@ -37,74 +37,278 @@ st.markdown("""
         border-radius: 10px;
     }
     
-    /* Tutorial Box */
-    .tutorial-box {
-        background-color: #f0f2f6;
-        border-radius: 10px;
-        padding: 20px;
-        margin-bottom: 20px;
-        border-left: 5px solid #ff4b4b;
+    /* Barra de Progresso Customizada */
+    .stProgress > div > div > div > div {
+        background-color: #58cc02;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
-CSV_FILE = "enamed_cronograma_final.csv"
+CSV_FILE = "enamed_daily_db.csv" # Arquivo novo para a estrutura diária
 DEFAULT_USERS = [] 
 
 # Avatares
 AVATARS = [
-    "👨‍⚕️", "👩‍⚕️", "🦉", "🧠", "🫀", "🧬", "🚑", "🏥", "💉", "💊", 
+    "👨‍⚕️", "👩‍⚕️", "🏥", "🧠", "🫀", "🧬", "🚑", "🩺", "💉", "💊", 
     "🦠", "🩸", "🎓", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🚀", "💡", "🔥"
 ]
 
-# Tradução Dias
-DIAS_PT = {0: "Seg", 1: "Ter", 2: "Qua", 3: "Qui", 4: "Sex", 5: "Sáb", 6: "Dom"}
-
-# --- DADOS DO CRONOGRAMA (RAW CSV) ---
-RAW_SCHEDULE = """Semana,Data_Inicio,Data_Fim,Foco_Principal,Tarefas_Chave_Enamed (Prioridade Alta)
-01,20/02/2026,26/02/2026,Preventiva & Pediatria,"1. Imunizações: Calendário < 1 ano e Gestante | 2. Vigilância em Saúde: Notificação Compulsória e Investigação de Óbitos | 3. Revisão Flash: Vacinas"
-02,27/02/2026,05/03/2026,Obstetrícia & Infecto,"1. Pré-Natal: Rotina, Exames e Suplementação | 2. Arboviroses: Dengue (Manejo A-D), Zika e Chikungunya | 3. Cirurgia Pediátrica: Hérnias e Fimose"
-03,06/03/2026,12/03/2026,Gineco & Pediatria,"1. ISTs: Úlceras Genitais (Sífilis, Cancro, Herpes) | 2. Doenças Exantemáticas: Sarampo e Varicela | 3. Sistemas de Informação em Saúde (SIM/SINAN)"
-04,13/03/2026,19/03/2026,Clínica & Preventiva,"1. Hipertensão (HAS): Diagnóstico e Drogas 1ª Linha | 2. Medidas de Saúde Coletiva: Coeficientes e Indicadores | 3. Pneumologia: Pneumonia Adquirida na Comunidade (PAC)"
-05,20/03/2026,26/03/2026,Obstetrícia & Pediatria,"1. DHEG: Pré-eclâmpsia (Diagnóstico e Sulfato de Magnésio) | 2. Icterícia Neonatal: Zonas de Kramer e Incompatibilidade | 3. Sepse Neonatal: Fatores de Risco"
-06,27/03/2026,02/04/2026,Cirurgia & Infecto,"1. Trauma (ATLS): Avaliação Primária (ABCDE) | 2. HIV/AIDS: Diagnóstico e Infecções Oportunistas | 3. Cirurgia do Trauma: Trauma Abdominal Fechado vs Penetrante"
-07,03/04/2026,09/04/2026,Gineco & Clínica,"1. Rastreamento (Screening): CA Colo Utero e Mama (Diretrizes MS) | 2. Diabetes Mellitus: Rastreio e Metas Terapêuticas | 3. Climatério: Terapia de Reposição Hormonal"
-08,10/04/2026,16/04/2026,Preventiva & Gastro,"1. Estudos Epidemiológicos: Coorte vs Caso-Controle vs Transversal | 2. Dispepsia e DRGE: Diagnóstico e IBP | 3. Medicina Baseada em Evidências: Sensibilidade e Especificidade"
-09,17/04/2026,23/04/2026,Obstetrícia & Pediatria,"1. Sangramentos 1ª Metade: Aborto, Mola e Ectópica | 2. Aleitamento Materno: Pega correta e Contraindicações (HIV/HTLV) | 3. Crescimento: Curvas da OMS (Escore Z)"
-10,24/04/2026,30/04/2026,Cirurgia & Nefro,"1. Abdome Agudo: Inflamatório (Apendicite/Colecistite) | 2. Litíase Urinária: Cólica Nefrética e Tratamento | 3. Hérnias da Parede Abdominal: Inguinais e Femorais"
-11,01/05/2026,07/05/2026,Clínica & Infecto,"1. Tuberculose: Diagnóstico (TRM/Bacilo) e Tratamento (RIPE) | 2. Asma: Classificação e Manejo da Crise | 3. DPOC: Classificação GOLD"
-12,08/05/2026,14/05/2026,REVISÃO GERAL,"SEMANA BUFFER: Recuperar atrasos e focar EXCLUSIVAMENTE no Caderno de Erros das semanas 1-11."
-13,15/05/2026,21/05/2026,Preventiva & Gineco,"1. SUS: Princípios Doutrinários (Universalidade, Integralidade, Equidade) | 2. Sangramento Uterino Anormal (SUA): PALM-COEIN | 3. Amenorreia: Primária vs Secundária"
-14,22/05/2026,28/05/2026,Pediatria & Cardio,"1. IVAS na Infância: Otite, Sinusite e Faringite | 2. Insuficiência Cardíaca: Classificação NYHA e Drogas que mudam mortalidade | 3. Pneumonias na Infância: Quando internar?"
-15,29/05/2026,04/06/2026,Obstetrícia & Cirurgia,"1. Sangramentos 3ª Metade: Placenta Prévia e DPP (Diagnóstico Diferencial) | 2. Pré-Operatório: Risco Cirúrgico e Jejum | 3. Complicações Pós-Op: Febre e Deiscência"
-16,05/06/2026,11/06/2026,Infecto & Gastro,"1. Hepatites Virais: Sorologia da Hepatite B (HBsAg, Anti-HBs) | 2. Diarreia Aguda: Planos de Hidratação (A, B, C) | 3. Parasitoses Intestinais: Tratamento Empírico"
-17,12/06/2026,18/06/2026,Preventiva & Psiquiatria,"1. Atenção Primária: Política Nacional (PNAB) e Atributos | 2. Transtornos de Ansiedade e Depressão: Critérios DSM-5 e ISRS | 3. Ética Médica: Sigilo e Código de Ética"
-18,19/06/2026,25/06/2026,Gineco & Pediatria,"1. SOP e Infertilidade: Critérios de Rotterdam | 2. Puberdade: Precoce vs Atrasada (Estadiamento de Tanner) | 3. Anticoncepção: Critérios de Elegibilidade da OMS"
-19,26/06/2026,02/07/2026,Clínica & Neuro,"1. AVC: Isquêmico vs Hemorrágico (Janela de Trombólise) | 2. Cefaleias: Migrânea vs Tensional vs Em Salvas | 3. Delirium vs Demência"
-20,03/07/2026,09/07/2026,Cirurgia & Ortopedia,"1. Queimaduras: Regra dos 9 e Fórmula de Parkland | 2. Fraturas Expostas: Classificação de Gustilo | 3. Trauma Torácico: Pneumotórax e Tamponamento"
-21,10/07/2026,16/07/2026,Obstetrícia & Infecto,"1. Parto Prematuro: Tocólise e Corticoide | 2. Ruptura Prematura de Membros (RPMO) | 3. Infecções Congênitas: Toxoplasmose e Sífilis"
-22,17/07/2026,23/07/2026,Preventiva & Reumato,"1. Saúde do Trabalhador: LER/DORT e Pneumoconioses | 2. Artrites: Reumatoide vs Osteoartrose vs Gota | 3. Notificação em Saúde do Trabalhador"
-23,24/07/2026,30/07/2026,Pediatria & Gastro,"1. Síndromes Disabsortivas: Doença Celíaca | 2. Constipação Intestinal na Infância | 3. Desidratação: Avaliação e Manejo"
-24,31/07/2026,06/08/2026,Clínica & Hemato,"1. Anemias Carenciais: Ferropriva e Megaloblástica | 2. Leucemias Agudas e Crônicas (Diferenciação básica) | 3. Distúrbios da Coagulação"
-25,07/08/2026,13/08/2026,REVISÃO MEIO DE ANO,"SEMANA DE SIMULADO GERAL: Fazer prova na íntegra (100 questões) e corrigir cada erro."
-26,14/08/2026,20/08/2026,Cirurgia & Urologia,"1. Câncer de Próstata: Rastreamento e Tratamento | 2. Nefrolitíase: Tratamento Cirúrgico | 3. Escroto Agudo: Torção Testicular"
-27,21/08/2026,27/08/2026,Gineco & Mastologia,"1. Nódulos Mamários: BIRADS e Conduta | 2. Câncer de Mama: Tipos Histológicos e Tratamento | 3. Incontinência Urinária: Esforço vs Urgência"
-28,28/08/2026,03/09/2026,Preventiva & Clínica,"1. Financiamento do SUS: Blocos de Financiamento | 2. Emergências Hipertensivas e Crise Convulsiva | 3. Intoxicações Exógenas (Carvão Ativado?)"
-29,04/09/2026,10/09/2026,Obstetrícia & Pediatria,"1. Sofrimento Fetal Agudo: Cardiotocografia (DIPs) | 2. Reanimação Neonatal: O Fluxograma de Ouro (Atualizado 2022/23) | 3. Mecanismo de Parto"
-30,11/09/2026,17/09/2026,Clínica & Nefro,"1. Injúria Renal Aguda (IRA): Pré-renal vs NTA | 2. Doença Renal Crônica: Estadiamento e Complicações | 3. Distúrbios Hidroeletrolíticos (Sódio e Potássio)"
-31,18/09/2026,24/09/2026,Especialidades I,"1. Dermatologia: Hanseníase e Câncer de Pele | 2. Otorrino: Vertigens e Rinites | 3. Oftalmo: Olho Vermelho (Diferencial Básico)"
-32,25/09/2026,01/10/2026,Cirurgia & Vias Biliares,"1. Icterícia Obstrutiva: Coledocolitíase e Tumores Periampulares | 2. Pancreatite Aguda: Critérios de Ranson/Atlanta | 3. Trauma Pediátrico"
-33,02/10/2026,08/10/2026,Gineco & Oncologia,"1. Câncer de Colo Uterino: Estadiamento e Tratamento | 2. Câncer de Endométrio e Ovário | 3. Vulvovaginites (Revisão Prática)"
-34,09/10/2026,15/10/2026,Preventiva & Geriatria,"1. Geriatria: Síndromes Geriátricas (Quedas, Demência, Iatrogenia) | 2. Violência Interpessoal: Notificação | 3. Humanização e PNH"
-35,16/10/2026,22/10/2026,Pediatria & Emergência,"1. Emergências Pediátricas: Cetoacidose, Crise Asmática Grave | 2. Infecções do Trato Urinário na Criança | 3. Meningites (Líquor)"
-36,23/10/2026,29/10/2026,Clínica & Cardio,"1. Síndrome Coronariana Aguda: Com e Sem Supra (Conduta no PS) | 2. Arritmias: Fibrilação Atrial (Anticoagular?) | 3. Valvopatias"
-37,30/10/2026,05/11/2026,Cirurgia & Vascular,"1. Doença Arterial Obstrutiva Periférica (DAOP) | 2. Insuficiência Venosa Crônica (Varizes) | 3. Aneurismas de Aorta"
-38,06/11/2026,12/11/2026,SPRINT FINAL I,"FOCAR APENAS NOS ERROS: Refazer todas as questões erradas de PREVENTIVA e PEDIATRIA das últimas 37 semanas."
-39,13/11/2026,19/11/2026,SPRINT FINAL II,"FOCAR APENAS NOS ERROS: Refazer todas as questões erradas de CLÍNICA e CIRURGIA das últimas 37 semanas."
-40,20/11/2026,26/11/2026,SPRINT FINAL III,"FOCAR APENAS NOS ERROS: Refazer todas as questões erradas de GINECOLOGIA e OBSTETRÍCIA."
-41,27/11/2026,03/12/2026,SIMULADOS FINAIS,"Realizar 2 Provas do Enamed/Enare anteriores na íntegra (tempo real) + Correção detalhada."
-42,04/12/2026,10/12/2026,SEMANA PRÉ-PROVA,"1. Revisão de Decorebas (Tabelas do Caderno de Erros) | 2. Higiene do Sono | 3. NADA DE QUESTÕES NOVAS DIFÍCEIS."
+# --- DADOS DO CRONOGRAMA DIÁRIO (CSV RAW) ---
+RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
+20/02/2026,Sex,1,Pediatria,Imunizações (Calendário),15 Questões + Eng. Reversa
+21/02/2026,Sáb,1,Medicina Preventiva,Vigilância em Saúde,30 Questões + Sprint Semanal
+23/02/2026,Seg,1,Ginecologia,Planejamento Familiar,15 Questões + Eng. Reversa
+24/02/2026,Ter,1,Obstetrícia,Pré-Natal (Rotina),15 Questões + Eng. Reversa
+25/02/2026,Qua,1,Infectologia,Arboviroses (Dengue/Zika),15 Questões + Eng. Reversa
+26/02/2026,Qui,1,Cirurgia,Cirurgia Infantil I (Hérnias),15 Questões + Eng. Reversa
+27/02/2026,Sex,2,Pediatria,Imunizações (Vacinas Especiais),15 Questões + Eng. Reversa
+28/02/2026,Sáb,2,Medicina Preventiva,Sistemas de Informação (SIM/SINAN),30 Questões + Sprint Semanal
+02/03/2026,Seg,2,Obstetrícia,Pré-Natal (Exames),15 Questões + Eng. Reversa
+03/03/2026,Ter,2,Infectologia,Arboviroses (Manejo Clínico),15 Questões + Eng. Reversa
+04/03/2026,Qua,2,Cirurgia,Cirurgia Infantil II,15 Questões + Eng. Reversa
+05/03/2026,Qui,2,Ginecologia,Planejamento Familiar (Métodos),15 Questões + Eng. Reversa
+06/03/2026,Sex,3,Pediatria,Doenças Exantemáticas,15 Questões + Eng. Reversa
+07/03/2026,Sáb,3,Medicina Preventiva,Sistemas de Informação,30 Questões + Sprint Semanal
+09/03/2026,Seg,3,Medicina Preventiva,Vigilância em Saúde,15 Questões + Eng. Reversa
+10/03/2026,Ter,3,Ginecologia,Úlceras Genitais (ISTs),15 Questões + Eng. Reversa
+11/03/2026,Qua,3,Infectologia,Arboviroses (Revisão),15 Questões + Eng. Reversa
+12/03/2026,Qui,3,Cirurgia,Cirurgia Infantil II,15 Questões + Eng. Reversa
+13/03/2026,Sex,4,Medicina Preventiva,Medidas de Saúde Coletiva,15 Questões + Eng. Reversa
+14/03/2026,Sáb,4,Obstetrícia,Distúrbios Hipertensivos (DHEG),30 Questões + Sprint Semanal
+16/03/2026,Seg,4,Pediatria,Doenças Exantemáticas II,15 Questões + Eng. Reversa
+17/03/2026,Ter,4,Cirurgia,Cirurgia Infantil III,15 Questões + Eng. Reversa
+18/03/2026,Qua,4,Ginecologia,Úlceras Genitais,15 Questões + Eng. Reversa
+19/03/2026,Qui,4,Pneumologia,Pneumologia Intensiva,15 Questões + Eng. Reversa
+20/03/2026,Sex,5,Medicina Preventiva,Medidas de Saúde Coletiva II,15 Questões + Eng. Reversa
+21/03/2026,Sáb,5,Pediatria,Icterícia e Sepse Neonatal,30 Questões + Sprint Semanal
+23/03/2026,Seg,5,Ginecologia,Rastreamento de Câncer (Colo),15 Questões + Eng. Reversa
+24/03/2026,Ter,5,Obstetrícia,Doença Hipertensiva (Crônica),15 Questões + Eng. Reversa
+25/03/2026,Qua,5,Infectologia,HIV (Diagnóstico),15 Questões + Eng. Reversa
+26/03/2026,Qui,5,Cirurgia,Cirurgia Infantil III,15 Questões + Eng. Reversa
+27/03/2026,Sex,6,Medicina Preventiva,Indicadores de Saúde,15 Questões + Eng. Reversa
+28/03/2026,Sáb,6,Pediatria,Emergências Pediátricas,30 Questões + Sprint Semanal
+30/03/2026,Seg,6,Ginecologia,Rastreamento de Câncer (Mama),15 Questões + Eng. Reversa
+31/03/2026,Ter,6,Obstetrícia,Doença Hipertensiva (Pré-eclâmpsia),15 Questões + Eng. Reversa
+01/04/2026,Qua,6,Pediatria,Icterícia e Sepse Neonatal,15 Questões + Eng. Reversa
+02/04/2026,Qui,6,Cirurgia,Trauma - Avaliação Inicial (ABCDE),15 Questões + Eng. Reversa
+03/04/2026,Sex,7,Pediatria,Emergências Pediátricas II,15 Questões + Eng. Reversa
+04/04/2026,Sáb,7,Medicina Preventiva,Estudos Epidemiológicos,30 Questões + Sprint Semanal
+06/04/2026,Seg,7,Ginecologia,Rastreamento de Câncer,15 Questões + Eng. Reversa
+07/04/2026,Ter,7,Obstetrícia,Doença Hipertensiva (Eclampsia),15 Questões + Eng. Reversa
+08/04/2026,Qua,7,Infectologia,HIV (Tratamento),15 Questões + Eng. Reversa
+09/04/2026,Qui,7,Cirurgia,Trauma - Vias Aéreas,15 Questões + Eng. Reversa
+10/04/2026,Sex,8,Medicina Preventiva,Estudos Epidemiológicos (Tipos),15 Questões + Eng. Reversa
+11/04/2026,Sáb,8,Pediatria,Imunizações (Revisão Geral),30 Questões + Sprint Semanal
+13/04/2026,Seg,8,Ginecologia,Climatério e Terapia Hormonal,15 Questões + Eng. Reversa
+14/04/2026,Ter,8,Obstetrícia,Sífilis na Gestação,15 Questões + Eng. Reversa
+15/04/2026,Qua,8,Infectologia,HIV (Oportunistas),15 Questões + Eng. Reversa
+16/04/2026,Qui,8,Pediatria,Emergências Pediátricas,15 Questões + Eng. Reversa
+17/04/2026,Sex,9,Pediatria,Cardiopatias Congênitas,15 Questões + Eng. Reversa
+18/04/2026,Sáb,9,Medicina Preventiva,Epidemiologia (Cálculos),30 Questões + Sprint Semanal
+20/04/2026,Seg,9,Ginecologia,Climatério (Sintomas),15 Questões + Eng. Reversa
+21/04/2026,Ter,9,Obstetrícia,Sífilis Congênita,15 Questões + Eng. Reversa
+22/04/2026,Qua,9,Ginecologia,Doenças Benignas da Mama,15 Questões + Eng. Reversa
+23/04/2026,Qui,9,Ginecologia,Planejamento Familiar (DIU/Hormônios),15 Questões + Eng. Reversa
+24/04/2026,Sex,10,Medicina Preventiva,Saúde do Trabalhador,15 Questões + Eng. Reversa
+25/04/2026,Sáb,10,Pediatria,Cuidados Neonatais,30 Questões + Sprint Semanal
+27/04/2026,Seg,10,Ginecologia,Doenças Benignas (Ovário),15 Questões + Eng. Reversa
+28/04/2026,Ter,10,Obstetrícia,Infecções na Gestação,15 Questões + Eng. Reversa
+29/04/2026,Qua,10,Obstetrícia,Sangramento da 1ª Metade (Aborto),15 Questões + Eng. Reversa
+30/04/2026,Qui,10,Infectologia,Tuberculose (Diagnóstico),15 Questões + Eng. Reversa
+01/05/2026,Sex,11,Pediatria,Cuidados Neonatais (Sala de Parto),15 Questões + Eng. Reversa
+02/05/2026,Sáb,11,Medicina Preventiva,Saúde do Trabalhador (Doenças),30 Questões + Sprint Semanal
+04/05/2026,Seg,11,Obstetrícia,Sangramento 1ª Metade (Ectópica),15 Questões + Eng. Reversa
+05/05/2026,Ter,11,Infectologia,Tuberculose (Tratamento),15 Questões + Eng. Reversa
+06/05/2026,Qua,11,Cirurgia,Trauma Abdominal,15 Questões + Eng. Reversa
+07/05/2026,Qui,11,Ginecologia,Doenças Benignas da Mama,15 Questões + Eng. Reversa
+08/05/2026,Sex,12,Pediatria,Asma na Infância,15 Questões + Eng. Reversa
+09/05/2026,Sáb,12,Medicina Preventiva,Vigilância Sanitária,30 Questões + Sprint Semanal
+11/05/2026,Seg,12,Ginecologia,Vulvovaginites (Candidíase/Vaginose),15 Questões + Eng. Reversa
+12/05/2026,Ter,12,Obstetrícia,Sangramento 1ª Metade (Mola),15 Questões + Eng. Reversa
+13/05/2026,Qua,12,Cirurgia,Trauma Pélvico,15 Questões + Eng. Reversa
+14/05/2026,Qui,12,Pneumologia,Pneumonia Adquirida na Comunidade,15 Questões + Eng. Reversa
+15/05/2026,Sex,13,Pediatria,Asma (Crise Aguda),15 Questões + Eng. Reversa
+16/05/2026,Sáb,13,Medicina Preventiva,Ética Médica,30 Questões + Sprint Semanal
+18/05/2026,Seg,13,Ginecologia,Vulvovaginites (ISTs),15 Questões + Eng. Reversa
+19/05/2026,Ter,13,Obstetrícia,Sangramento 1ª Metade (Revisão),15 Questões + Eng. Reversa
+20/05/2026,Qua,13,Obstetrícia,Pré-Natal (Alto Risco),15 Questões + Eng. Reversa
+21/05/2026,Qui,13,Cirurgia,Trauma Abdominal (Baço/Fígado),15 Questões + Eng. Reversa
+22/05/2026,Sex,14,Medicina Preventiva,Processo Saúde-Doença,15 Questões + Eng. Reversa
+23/05/2026,Sáb,14,Medicina Preventiva,Medidas de Saúde Coletiva,30 Questões + Sprint Semanal
+25/05/2026,Seg,14,Pediatria,Aleitamento Materno,15 Questões + Eng. Reversa
+26/05/2026,Ter,14,Obstetrícia,Assistência ao Parto (Fases),15 Questões + Eng. Reversa
+27/05/2026,Qua,14,Pediatria,Asma (Manutenção),15 Questões + Eng. Reversa
+28/05/2026,Qui,14,Infectologia,Meningites,15 Questões + Eng. Reversa
+29/05/2026,Sex,15,Medicina Preventiva,História Natural da Doença,15 Questões + Eng. Reversa
+30/05/2026,Sáb,15,Pediatria,Aleitamento (Dificuldades),30 Questões + Sprint Semanal
+01/06/2026,Seg,15,Ginecologia,Endometriose,15 Questões + Eng. Reversa
+02/06/2026,Ter,15,Obstetrícia,Assistência ao Parto (Humanização),15 Questões + Eng. Reversa
+03/06/2026,Qua,15,Pediatria,Cardiopatias Congênitas,15 Questões + Eng. Reversa
+04/06/2026,Qui,15,Infectologia,Meningites (Líquor),15 Questões + Eng. Reversa
+05/06/2026,Sex,16,Pediatria,Diarreia Aguda e Desidratação,15 Questões + Eng. Reversa
+06/06/2026,Sáb,16,Medicina Preventiva,Medicina de Família (Ferramentas),30 Questões + Sprint Semanal
+08/06/2026,Seg,16,Ginecologia,Endometriose (Tratamento),15 Questões + Eng. Reversa
+09/06/2026,Ter,16,Obstetrícia,Assistência ao Parto,15 Questões + Eng. Reversa
+10/06/2026,Qua,16,Cirurgia,Abdome Agudo (Apendicite),15 Questões + Eng. Reversa
+11/06/2026,Qui,16,Nefrologia,Lesão Renal Aguda (IRA),15 Questões + Eng. Reversa
+12/06/2026,Sex,17,Pediatria,Diarreia (Planos A-B-C),15 Questões + Eng. Reversa
+13/06/2026,Sáb,17,Medicina Preventiva,Saúde do Idoso,30 Questões + Sprint Semanal
+15/06/2026,Seg,17,Ginecologia,Câncer de Mama (Tipos),15 Questões + Eng. Reversa
+16/06/2026,Ter,17,Infectologia,Meningites,15 Questões + Eng. Reversa
+17/06/2026,Qua,17,Infectologia,Arboviroses (Febre Amarela),15 Questões + Eng. Reversa
+18/06/2026,Qui,17,Cirurgia,Abdome Agudo Inflamatório,15 Questões + Eng. Reversa
+19/06/2026,Sex,18,Pediatria,Pneumonias na Infância,15 Questões + Eng. Reversa
+20/06/2026,Sáb,18,Medicina Preventiva,Saúde do Idoso (Fragilidade),30 Questões + Sprint Semanal
+22/06/2026,Seg,18,Medicina Preventiva,Processo Saúde-Doença,15 Questões + Eng. Reversa
+23/06/2026,Ter,18,Ginecologia,Câncer de Mama (Cirurgia),15 Questões + Eng. Reversa
+24/06/2026,Qua,18,Obstetrícia,Vitalidade Fetal (Cardio),15 Questões + Eng. Reversa
+25/06/2026,Qui,18,Infectologia,Micoses Sistêmicas,15 Questões + Eng. Reversa
+26/06/2026,Sex,19,Medicina Preventiva,Princípios do SUS (Lei 8080),15 Questões + Eng. Reversa
+27/06/2026,Sáb,19,Pediatria,Choque em Pediatria,30 Questões + Sprint Semanal
+29/06/2026,Seg,19,Ginecologia,Câncer de Mama (Adjuvância),15 Questões + Eng. Reversa
+30/06/2026,Ter,19,Obstetrícia,Vitalidade Fetal (Perfil Biofísico),15 Questões + Eng. Reversa
+01/07/2026,Qua,19,Infectologia,Sepse (qSOFA/SOFA),15 Questões + Eng. Reversa
+02/07/2026,Qui,19,Pediatria,Pneumonias (Complicações),15 Questões + Eng. Reversa
+03/07/2026,Sex,20,Pediatria,Choque (Séptico/Hipovolêmico),15 Questões + Eng. Reversa
+04/07/2026,Sáb,20,Infectologia,Sepse (Manejo 1h),30 Questões + Sprint Semanal
+06/07/2026,Seg,20,Ginecologia,Doenças Benignas da Mama,15 Questões + Eng. Reversa
+07/07/2026,Ter,20,Cirurgia,Cirurgia Vascular (DAOP),15 Questões + Eng. Reversa
+08/07/2026,Qua,20,Ginecologia,Câncer de Mama (Revisão),15 Questões + Eng. Reversa
+09/07/2026,Qui,20,Obstetrícia,Vitalidade Fetal,15 Questões + Eng. Reversa
+10/07/2026,Sex,21,Pediatria,Choque em Pediatria,15 Questões + Eng. Reversa
+11/07/2026,Sáb,21,Infectologia,Sepse,30 Questões + Sprint Semanal
+13/07/2026,Seg,21,Ginecologia,Doenças Benignas da Mama,15 Questões + Eng. Reversa
+14/07/2026,Ter,21,Cirurgia,Cirurgia Vascular (Varizes),15 Questões + Eng. Reversa
+15/07/2026,Qua,21,Ginecologia,Câncer de Mama,15 Questões + Eng. Reversa
+16/07/2026,Qui,21,Obstetrícia,Vitalidade Fetal,15 Questões + Eng. Reversa
+17/07/2026,Sex,22,Pediatria,Reanimação Neonatal (Golden Minute),15 Questões + Eng. Reversa
+18/07/2026,Sáb,22,Pediatria,Diarreia Crônica,30 Questões + Sprint Semanal
+20/07/2026,Seg,22,Ginecologia,Sangramento Uterino Anormal (SUA),15 Questões + Eng. Reversa
+21/07/2026,Ter,22,Obstetrícia,Diabetes Gestacional,15 Questões + Eng. Reversa
+22/07/2026,Qua,22,Infectologia,Parasitoses Intestinais,15 Questões + Eng. Reversa
+23/07/2026,Qui,22,Obstetrícia,Mecanismo de Parto,15 Questões + Eng. Reversa
+24/07/2026,Sex,23,Pediatria,Crescimento (Curvas),15 Questões + Eng. Reversa
+25/07/2026,Sáb,23,Pediatria,Constipação Intestinal,30 Questões + Sprint Semanal
+27/07/2026,Seg,23,Ginecologia,Sangramento Uterino (PALM-COEIN),15 Questões + Eng. Reversa
+28/07/2026,Ter,23,Obstetrícia,Sangramento da 2ª Metade (Placenta Prévia),15 Questões + Eng. Reversa
+29/07/2026,Qua,23,Infectologia,Parasitoses,15 Questões + Eng. Reversa
+30/07/2026,Qui,23,Pediatria,Reanimação Neonatal,15 Questões + Eng. Reversa
+31/07/2026,Sex,24,Pediatria,Doença Celíaca,15 Questões + Eng. Reversa
+01/08/2026,Sáb,24,Ginecologia,Tumores Anexiais (Cistos),30 Questões + Sprint Semanal
+03/08/2026,Seg,24,Obstetrícia,Sangramento da 2ª Metade (DPP),15 Questões + Eng. Reversa
+04/08/2026,Ter,24,Pediatria,Crescimento (Puberdade),15 Questões + Eng. Reversa
+05/08/2026,Qua,24,Cirurgia,Urologia (Litíase),15 Questões + Eng. Reversa
+06/08/2026,Qui,24,Cardiologia,Insuficiência Cardíaca,15 Questões + Eng. Reversa
+07/08/2026,Sex,25,Pediatria,Tópicos em Pediatria,15 Questões + Eng. Reversa
+08/08/2026,Sáb,25,Pediatria,Reanimação neonatal (Avançado),30 Questões + Sprint Semanal
+10/08/2026,Seg,25,Ginecologia,Tumores Anexiais,15 Questões + Eng. Reversa
+11/08/2026,Ter,25,Obstetrícia,Sangramento da 2ª Metade (Rotura),15 Questões + Eng. Reversa
+12/08/2026,Qua,25,Cirurgia,Urgências Abdominais (Obstrução),15 Questões + Eng. Reversa
+13/08/2026,Qui,25,Infectologia,Parasitoses,15 Questões + Eng. Reversa
+14/08/2026,Sex,26,Medicina Preventiva,Princípios do SUS,15 Questões + Eng. Reversa
+15/08/2026,Sáb,26,Pediatria,Diagnóstico Nutricional,30 Questões + Sprint Semanal
+17/08/2026,Seg,26,Pediatria,Vitaminas e Carências,15 Questões + Eng. Reversa
+18/08/2026,Ter,26,Medicina Preventiva,Financiamento do SUS,15 Questões + Eng. Reversa
+19/08/2026,Qua,26,Ginecologia,Prolapsos Genitais,15 Questões + Eng. Reversa
+20/08/2026,Qui,26,Obstetrícia,Sangramento 2ª Metade (Vasa Previa),15 Questões + Eng. Reversa
+21/08/2026,Sex,27,Medicina Preventiva,Estatística (Testes Diagnósticos),15 Questões + Eng. Reversa
+22/08/2026,Sáb,27,Pediatria,Desnutrição na Infância,30 Questões + Sprint Semanal
+24/08/2026,Seg,27,Pediatria,Febre Sem Sinais Localizatórios,15 Questões + Eng. Reversa
+25/08/2026,Ter,27,Ginecologia,Prolapsos,15 Questões + Eng. Reversa
+26/08/2026,Qua,27,Obstetrícia,Sangramento 2ª Metade,15 Questões + Eng. Reversa
+27/08/2026,Qui,27,Infectologia,Infecções Hospitalares (IRAS),15 Questões + Eng. Reversa
+28/08/2026,Sex,28,Medicina Preventiva,Estatística Médica,15 Questões + Eng. Reversa
+29/08/2026,Sáb,28,Ginecologia,Câncer de Colo Uterino (HPV),30 Questões + Sprint Semanal
+31/08/2026,Seg,28,Obstetrícia,Sangramento 2ª Metade,15 Questões + Eng. Reversa
+01/09/2026,Ter,28,Obstetrícia,Assistência ao Parto,15 Questões + Eng. Reversa
+02/09/2026,Qua,28,Pediatria,Desnutrição,15 Questões + Eng. Reversa
+03/09/2026,Qui,28,Infectologia,Infecções Hospitalares,15 Questões + Eng. Reversa
+04/09/2026,Sex,29,Pediatria,Obesidade Infantil,15 Questões + Eng. Reversa
+05/09/2026,Sáb,29,Obstetrícia,Partograma e Distocia,30 Questões + Sprint Semanal
+07/09/2026,Seg,29,Infectologia,Pneumonias Bacterianas,15 Questões + Eng. Reversa
+08/09/2026,Ter,29,Ginecologia,Sangramento Uterino,15 Questões + Eng. Reversa
+09/09/2026,Qua,29,Ginecologia,Câncer de Colo Uterino (Tratamento),15 Questões + Eng. Reversa
+10/09/2026,Qui,29,Cirurgia,Cirurgia Vascular,15 Questões + Eng. Reversa
+11/09/2026,Sex,30,Pediatria,Obesidade Infantil,15 Questões + Eng. Reversa
+12/09/2026,Sáb,30,Obstetrícia,Partograma e Distocia (Tipos),30 Questões + Sprint Semanal
+14/09/2026,Seg,30,Pediatria,Infecção Urinária (ITU),15 Questões + Eng. Reversa
+15/09/2026,Ter,30,Pediatria,Diagnóstico Nutricional,15 Questões + Eng. Reversa
+16/09/2026,Qua,30,Ginecologia,Incontinência Urinária (Esforço/Urgência),15 Questões + Eng. Reversa
+17/09/2026,Qui,30,Cirurgia,Abdome Agudo Obstrutivo,15 Questões + Eng. Reversa
+18/09/2026,Sex,31,Medicina Preventiva,Normas Regulamentadoras (Trabalho),15 Questões + Eng. Reversa
+19/09/2026,Sáb,31,Pediatria,ITU na Infância,30 Questões + Sprint Semanal
+21/09/2026,Seg,31,Pediatria,Bronquiolite Viral Aguda,15 Questões + Eng. Reversa
+22/09/2026,Ter,31,Infectologia,Pneumonias,15 Questões + Eng. Reversa
+23/09/2026,Qua,31,Ginecologia,Anatomia e Embriologia,15 Questões + Eng. Reversa
+24/09/2026,Qui,31,Obstetrícia,Infecções Congênitas (TORCH),15 Questões + Eng. Reversa
+25/09/2026,Sex,32,Medicina Preventiva,Marcos Legais do SUS,15 Questões + Eng. Reversa
+26/09/2026,Sáb,32,Ginecologia,Câncer de Endométrio,30 Questões + Sprint Semanal
+28/09/2026,Seg,32,Obstetrícia,Gestação Múltipla,15 Questões + Eng. Reversa
+29/09/2026,Ter,32,Pediatria,Bronquiolite,15 Questões + Eng. Reversa
+30/09/2026,Qua,32,Infectologia,Pneumonias,15 Questões + Eng. Reversa
+01/10/2026,Qui,32,Cirurgia,Abdome Agudo,15 Questões + Eng. Reversa
+02/10/2026,Sex,33,Medicina Preventiva,Leis Orgânicas da Saúde,15 Questões + Eng. Reversa
+03/10/2026,Sáb,33,Pediatria,Alergias (Anafilaxia),30 Questões + Sprint Semanal
+05/10/2026,Seg,33,Ginecologia,Câncer do Corpo do Útero,15 Questões + Eng. Reversa
+06/10/2026,Ter,33,Infectologia,Pneumonias,15 Questões + Eng. Reversa
+07/10/2026,Qua,33,Ginecologia,Adenomiose,15 Questões + Eng. Reversa
+08/10/2026,Qui,33,Obstetrícia,Infecção Puerperal,15 Questões + Eng. Reversa
+09/10/2026,Sex,34,Ginecologia,Amenorreia (Primária/Secundária),15 Questões + Eng. Reversa
+10/10/2026,Sáb,34,Obstetrícia,Hemorragia Pós-Parto (4 Ts),30 Questões + Sprint Semanal
+12/10/2026,Seg,34,Pediatria,Puberdade (Precoce/Atrasada),15 Questões + Eng. Reversa
+13/10/2026,Ter,34,Infectologia,Pneumonias,15 Questões + Eng. Reversa
+14/10/2026,Qua,34,Pediatria,Urticária,15 Questões + Eng. Reversa
+15/10/2026,Qui,34,Cirurgia,Complicações Pós-Operatórias,15 Questões + Eng. Reversa
+16/10/2026,Sex,35,Ginecologia,Amenorreia,15 Questões + Eng. Reversa
+17/10/2026,Sáb,35,Obstetrícia,Hemorragia Pós-Parto,30 Questões + Sprint Semanal
+19/10/2026,Seg,35,Pediatria,Doença de Kawasaki,15 Questões + Eng. Reversa
+20/10/2026,Ter,35,Pediatria,ITU (Profilaxia),15 Questões + Eng. Reversa
+21/10/2026,Qua,35,Pediatria,Puberdade,15 Questões + Eng. Reversa
+22/10/2026,Qui,35,Infectologia,Sepse,15 Questões + Eng. Reversa
+23/10/2026,Sex,36,Medicina Preventiva,Atenção Primária (PNAB),15 Questões + Eng. Reversa
+24/10/2026,Sáb,36,Medicina Preventiva,Estatística Médica,30 Questões + Sprint Semanal
+26/10/2026,Seg,36,Obstetrícia,Bacia Obstétrica,15 Questões + Eng. Reversa
+27/10/2026,Ter,36,Ginecologia,Ciclo Menstrual (Fisiologia),15 Questões + Eng. Reversa
+28/10/2026,Qua,36,Pediatria,Doença de Kawasaki,15 Questões + Eng. Reversa
+29/10/2026,Qui,36,Cirurgia,Vesícula e Vias Biliares,15 Questões + Eng. Reversa
+30/10/2026,Sex,37,Medicina Preventiva,Saúde da Família,15 Questões + Eng. Reversa
+31/10/2026,Sáb,37,Pediatria,Distúrbios Metabólicos,30 Questões + Sprint Semanal
+02/11/2026,Seg,37,Ginecologia,Infertilidade Conjugal,15 Questões + Eng. Reversa
+03/11/2026,Ter,37,Obstetrícia,Estática Fetal,15 Questões + Eng. Reversa
+04/11/2026,Qua,37,Cirurgia,Colecistite/Coledocolitíase,15 Questões + Eng. Reversa
+05/11/2026,Qui,37,Infectologia,COVID-19,15 Questões + Eng. Reversa
+06/11/2026,Sex,38,Medicina Preventiva,Políticas de Saúde,15 Questões + Eng. Reversa
+07/11/2026,Sáb,38,Pediatria,Distúrbios Metabólicos,30 Questões + Sprint Semanal
+09/11/2026,Seg,38,Ginecologia,Infertilidade (Investigação),15 Questões + Eng. Reversa
+10/11/2026,Ter,38,Pediatria,Síndromes Genéticas (Down/Turner),15 Questões + Eng. Reversa
+11/11/2026,Qua,38,Obstetrícia,Bacia Obstétrica,15 Questões + Eng. Reversa
+12/11/2026,Qui,38,Obstetrícia,Partograma,15 Questões + Eng. Reversa
+13/11/2026,Sex,39,Medicina Preventiva,Redes de Atenção à Saúde,15 Questões + Eng. Reversa
+14/11/2026,Sáb,39,Pediatria,Síndromes Genéticas,30 Questões + Sprint Semanal
+16/11/2026,Seg,39,Medicina Preventiva,Políticas de Saúde,15 Questões + Eng. Reversa
+17/11/2026,Ter,39,Obstetrícia,TPP - Trabalho de Parto Prematuro,15 Questões + Eng. Reversa
+18/11/2026,Qua,39,Ginecologia,Incontinência Urinária,15 Questões + Eng. Reversa
+19/11/2026,Qui,39,Cirurgia,Cirurgia Plástica (Queimaduras),15 Questões + Eng. Reversa
+20/11/2026,Sex,40,Medicina Preventiva,Regionalização do SUS,15 Questões + Eng. Reversa
+21/11/2026,Sáb,40,Medicina Preventiva,Descentralização,30 Questões + Sprint Semanal
+23/11/2026,Seg,40,Medicina Preventiva,Bases do SUS,15 Questões + Eng. Reversa
+24/11/2026,Ter,40,Pediatria,Erros Inatos do Metabolismo,15 Questões + Eng. Reversa
+25/11/2026,Qua,40,Ginecologia,Miomatose Uterina,15 Questões + Eng. Reversa
+26/11/2026,Qui,40,Obstetrícia,Prematuridade,15 Questões + Eng. Reversa
+27/11/2026,Sex,41,Pediatria,Tuberculose na Infância,15 Questões + Eng. Reversa
+28/11/2026,Sáb,41,Medicina Preventiva,Pesquisa Epidemiológica,30 Questões + Sprint Semanal
+30/11/2026,Seg,41,Ginecologia,Miomatose,15 Questões + Eng. Reversa
+01/12/2026,Ter,41,Obstetrícia,RPMO (Bolsa Rota),15 Questões + Eng. Reversa
+02/12/2026,Qua,41,Infectologia,Endocardite Bacteriana,15 Questões + Eng. Reversa
+03/12/2026,Qui,41,Cirurgia,Queimaduras,15 Questões + Eng. Reversa
+04/12/2026,Sex,42,Medicina Preventiva,Pesquisa Qualitativa,15 Questões + Eng. Reversa
+05/12/2026,Sáb,42,Pediatria,Distúrbios Respiratórios,30 Questões + Sprint Semanal
+07/12/2026,Seg,42,Pediatria,Revisão Geral (Kawasaki/Exantemáticas),15 Questões + Eng. Reversa
+08/12/2026,Ter,42,Ginecologia,Rastreamento (Revisão Final),15 Questões + Eng. Reversa
+09/12/2026,Qua,42,Obstetrícia,RPMO,15 Questões + Eng. Reversa
+10/12/2026,Qui,42,Pediatria,Tuberculose,15 Questões + Eng. Reversa
+11/12/2026,Sex,43,Pediatria,Distúrbios Respiratórios,15 Questões + Eng. Reversa
 """
 
 # --- FUNÇÕES ---
@@ -119,7 +323,7 @@ def get_users_from_df(df):
 
 def init_db():
     if not os.path.exists(CSV_FILE):
-        cols = ["ID", "Semana", "Data_Alvo", "Tema", "Detalhes", "Link_Questões"]
+        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Link_Questões"]
         for user in DEFAULT_USERS:
             cols.extend([f"{user}_Status", f"{user}_Date"])
             
@@ -132,7 +336,7 @@ def init_db():
         initial_data = []
         for i, row_data in enumerate(reader):
             try:
-                date_str = row_data['Data_Fim']
+                date_str = row_data['Data']
                 dt_obj = datetime.strptime(date_str, "%d/%m/%Y").date()
                 formatted_date = str(dt_obj)
             except:
@@ -140,10 +344,12 @@ def init_db():
 
             row = [
                 i + 1, 
-                f"Semana {row_data['Semana']}", 
+                int(row_data['Semana_Estudo']), 
                 formatted_date, 
-                row_data['Foco_Principal'], 
-                row_data['Tarefas_Chave_Enamed (Prioridade Alta)'], 
+                row_data['Dia'],
+                row_data['Disciplina'],
+                row_data['Tema'],
+                row_data['Meta_Diaria'],
                 ""
             ]
             for _ in DEFAULT_USERS: row.extend([False, None])
@@ -194,8 +400,8 @@ if "logged_user" not in st.session_state:
         c1, c2, c3 = st.columns([1, 6, 1])
         with c2:
             st.markdown("<div style='text-align: center; font-size: 80px;'>🏥</div>", unsafe_allow_html=True)
-            st.markdown("<h1 style='text-align: center;'>Enamed Oficial</h1>", unsafe_allow_html=True)
-            st.caption("<div style='text-align: center;'>Cronograma 2026 • 42 Semanas</div>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align: center;'>Enamed Diário</h1>", unsafe_allow_html=True)
+            st.caption("<div style='text-align: center;'>Controle Dia a Dia • 2026</div>", unsafe_allow_html=True)
             
             tab_login, tab_register = st.tabs(["🔑 Entrar", "➕ Novo Participante"])
             
@@ -247,19 +453,36 @@ with st.sidebar:
 
 st.title("🏥 Desafio Enamed")
 
-# --- ABAS ---
 tab1, tab2, tab3, tab4 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin", "🔰 Tutorial"])
 
-# --- ABA 1: LIÇÕES ---
+# --- ABA 1: LIÇÕES (FEED DIÁRIO) ---
 with tab1:
-    st.markdown("### 📅 Cronograma Completo")
-    semanas = df["Semana"].unique()
+    st.markdown("### 📅 Cronograma Diário")
+    
+    # Agrupar por Semana
+    semanas = sorted(df["Semana"].unique())
+    
     for sem in semanas:
-        df_view = df[df["Semana"] == sem]
-        start_open = (sem == semanas[0]) 
+        df_week = df[df["Semana"] == sem]
         
-        with st.expander(f"📍 {sem}", expanded=start_open):
-            for index, row in df_view.iterrows():
+        # Calcular XP da Semana para o Cabeçalho
+        xp_semana_feito = 0
+        xp_semana_total = 0
+        
+        for idx, row in df_week.iterrows():
+            if f"{current_user}_Status" in df.columns:
+                xp_semana_total += 100 # Cada tarefa vale 100 max
+                if row[f"{current_user}_Status"]:
+                    xp_semana_feito += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
+        
+        # Define se abre a primeira semana automaticamente
+        start_open = (sem == 1)
+        
+        # Expander com Pontuação Agregada
+        with st.expander(f"📍 Semana {sem:02d} — ({xp_semana_feito} / {xp_semana_total} XP)", expanded=start_open):
+            
+            # Loop pelos DIAS da semana
+            for index, row in df_week.iterrows():
                 real_idx = df[df["ID"] == row["ID"]].index[0]
                 if f"{current_user}_Status" not in df.columns: st.rerun()
 
@@ -271,9 +494,8 @@ with tab1:
                 try: 
                     d_alvo = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
                     d_br = d_alvo.strftime("%d/%m")
-                    d_sem = DIAS_PT[d_alvo.weekday()]
                 except: 
-                    d_alvo = date.today(); d_br = "--/--"; d_sem = "---"
+                    d_alvo = date.today(); d_br = "--/--"
                 
                 bg_tema, border_tema = "#ffffff", "#e5e5e5"
                 if status:
@@ -283,53 +505,55 @@ with tab1:
                 else:
                     b_data, bg_data, t_data, lbl, ico = "#e5e5e5", "#f7f7f7", "#afafaf", "PRAZO", "📅"
 
+                disc_esc = html.escape(str(row['Disciplina']))
                 tema_esc = html.escape(str(row['Tema']))
-                det_esc = html.escape(str(row['Detalhes']))
+                meta_esc = html.escape(str(row['Meta']))
 
+                # CARTÃO DO DIA
                 st.markdown(f"""
-                <div style="display: flex; gap: 15px; align-items: stretch; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
-                    <div style="flex: 0 0 100px; background-color: {bg_data}; border: 2px solid {b_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; color: {t_data}; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
-                        <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px;">{lbl}</div>
-                        <div style="font-size: 24px; margin-bottom: 2px;">{ico}</div>
-                        <div style="font-size: 12px; font-weight: bold;">{d_sem}</div>
-                        <div style="font-size: 14px; font-weight: bold;">{d_br}</div>
+                <div style="display: flex; gap: 10px; align-items: stretch; width: 100%; margin-bottom: 10px; font-family: 'Varela Round', sans-serif;">
+                    <div style="flex: 0 0 80px; background-color: {bg_data}; border: 2px solid {b_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 5px; color: {t_data};">
+                        <div style="font-size: 9px; font-weight: bold;">{lbl}</div>
+                        <div style="font-size: 18px;">{ico}</div>
+                        <div style="font-size: 11px; font-weight: bold;">{row['Dia_Semana']}</div>
+                        <div style="font-size: 12px; font-weight: bold;">{d_br}</div>
                     </div>
-                    <div style="flex: 1; background-color: {bg_tema}; border: 2px solid {border_tema}; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
-                        <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.2; margin-bottom: 5px;">{tema_esc}</div>
-                        <div style="font-size: 13px; color: #888; line-height: 1.4;">{det_esc}</div>
+                    <div style="flex: 1; background-color: {bg_tema}; border: 2px solid {border_tema}; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: bold;">{disc_esc}</div>
+                        <div style="font-size: 15px; font-weight: bold; color: #4b4b4b; line-height: 1.2; margin-bottom: 3px;">{tema_esc}</div>
+                        <div style="font-size: 12px; color: #666;">🎯 {meta_esc}</div>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
 
-                c1, c2 = st.columns([3, 1])
+                # AÇÕES DO DIA (CHECK + LINK)
+                c1, c2 = st.columns([4, 1])
                 with c1:
-                    with st.expander("📂 Conteúdo Extra / Contribuir ➕"):
+                    with st.expander("🔗 Adicionar Link / Material"):
                         current_link = row['Link_Questões']
                         if current_link:
-                            st.markdown(f"🔗 **Link:** [{current_link}]({current_link})")
-                        else: st.info("Nenhum material ainda.")
-                        new_link = st.text_input("Colar Link:", key=f"l_{row['ID']}")
-                        if st.button("💾 Salvar", key=f"s_{row['ID']}"):
+                            st.markdown(f"**Link Salvo:** [{current_link}]({current_link})")
+                        new_link = st.text_input("Cole o link aqui:", key=f"l_{row['ID']}")
+                        if st.button("Salvar Link", key=f"s_{row['ID']}"):
                             if new_link:
                                 df.at[real_idx, "Link_Questões"] = new_link
-                                save_data(df); st.success("Atualizado!"); st.rerun()
+                                save_data(df); st.success("Salvo!"); st.rerun()
                 with c2:
                     if status:
-                        st.success(f"✅ FEITO! (+{pontos})")
-                        if st.button("Refazer", key=f"r_{row['ID']}"):
+                        if st.button("Desfazer", key=f"r_{row['ID']}"):
                             df.at[real_idx, f"{current_user}_Status"] = False; save_data(df); st.rerun()
                     else:
-                        l_btn = "Entregar" if hoje > d_alvo else "Concluir"
-                        t_btn = "secondary" if hoje > d_alvo else "primary"
-                        if st.button(l_btn, key=f"c_{row['ID']}", type=t_btn):
+                        lbl_btn = "Entregar" if hoje > d_alvo else "Concluir"
+                        type_btn = "secondary" if hoje > d_alvo else "primary"
+                        if st.button(lbl_btn, key=f"c_{row['ID']}", type=type_btn):
                             df.at[real_idx, f"{current_user}_Status"] = True
                             df.at[real_idx, f"{current_user}_Date"] = str(date.today())
-                            save_data(df); st.balloons(); st.rerun()
-                st.write("")
+                            save_data(df); st.rerun()
+                st.divider()
 
 # --- ABA 2: PLACAR ---
 with tab2:
-    st.subheader("🏆 Classificação Anual")
+    st.subheader("🏆 Classificação Geral")
     placar = []
     for u in ALL_USERS:
         pts, tasks = 0, 0
@@ -350,97 +574,29 @@ with tab2:
 
 # --- ABA 3: ADMIN ---
 with tab3:
-    st.write("Adicionar Tarefa Extra")
-    with st.form("add"):
-        c1, c2 = st.columns(2)
-        s, d = c1.text_input("Semana"), c2.date_input("Data")
-        t, dt = st.text_input("Tema"), st.text_input("Detalhes")
-        if st.form_submit_button("Salvar"):
-            nid = df["ID"].max() + 1 if not df.empty else 1
-            nrow = {"ID": nid, "Semana": s, "Data_Alvo": str(d), "Tema": t, "Detalhes": dt, "Link_Questões": ""}
-            for u in ALL_USERS: nrow[f"{u}_Status"], nrow[f"{u}_Date"] = False, None
-            df = pd.concat([df, pd.DataFrame([nrow])], ignore_index=True)
-            save_data(df); st.success("Ok!"); st.rerun()
-    st.divider()
-    if st.button("🗑️ ZERAR BANCO DE DADOS (Carregar Cronograma)", type="primary"):
+    st.warning("⚠️ Zona de Administração")
+    if st.button("🗑️ ZERAR BANCO DE DADOS (Reiniciar Cronograma)", type="primary"):
         if os.path.exists(CSV_FILE):
             os.remove(CSV_FILE)
             for k in list(st.session_state.keys()): del st.session_state[k]
-            st.warning("Banco reiniciado! Atualize a página."); st.rerun()
+            st.success("Sistema reiniciado! Atualize a página."); st.rerun()
 
 # --- ABA 4: TUTORIAL ---
 with tab4:
-    st.markdown("## 📚 Como Funciona o Desafio Enamed")
+    st.markdown("## 📚 Como Funciona o Enamed Diário")
+    st.info("💡 **Dica:** O segredo é a consistência diária!")
     
+    st.markdown("### 1️⃣ Estrutura Diária")
     st.markdown("""
-    Bem-vindo(a) ao seu companheiro de estudos! Este aplicativo foi desenhado para manter sua **consistência** e **organização** ao longo das 42 semanas de preparação.
+    O cronograma agora é dividido por **DIAS**.
+    1.  Clique na **Semana** para abrir a pasta.
+    2.  Você verá as tarefas de Segunda, Terça, etc.
+    3.  Cada dia tem sua própria meta (ex: 15 Questões).
     """)
     
-    st.info("💡 **Dica de Ouro:** O segredo não é estudar 12h por dia, mas estudar um pouco TODOS os dias sem falhar.")
-    
-    st.divider()
-    
-    st.markdown("### 1️⃣ Entendendo a Interface")
-    
-    col_tut1, col_tut2 = st.columns(2)
-    
-    with col_tut1:
-        st.markdown("#### 🎨 Cores e Status")
-        st.markdown("""
-        Cada tarefa muda de cor dependendo do seu progresso e da data:
-        
-        * ⬜ **Cinza (PRAZO):** Tarefa disponível, ainda dentro do prazo.
-        * 🟨 **Amarelo (ATRASADO):** A data alvo já passou e você ainda não concluiu.
-        * 🟩 **Verde (FEITO):** Tarefa concluída com sucesso!
-        """)
-        
-    with col_tut2:
-        st.markdown("#### 💎 Pontuação (XP)")
-        st.markdown("""
-        A gamificação serve para te motivar a não atrasar!
-        
-        * **100 XP:** Se você concluir a tarefa **antes ou no dia** do prazo.
-        * **50 XP:** Se você concluir a tarefa **depois** do prazo (Entregar atrasado).
-        * **0 XP:** Se não fizer.
-        """)
-        
-    st.divider()
-
-    st.markdown("### 2️⃣ Como Estudar (Passo a Passo)")
-    
+    st.markdown("### 2️⃣ Pontuação")
     st.markdown("""
-    **Passo 1: Abra a Semana Atual**
-    Na aba "Lições", clique na semana correspondente (ex: `📍 Semana 01`). Ela vai expandir e mostrar o tema.
-    
-    **Passo 2: Foco nas "Tarefas Chave"**
-    No cartão da lição, você verá o "Foco Principal" e um descritivo menor. Aquele descritivo contém as **3 missões da semana** (ex: "Ler sobre vacinas", "Fazer 10 questões", etc).
-    
-    **Passo 3: Marque como Concluído**
-    Assim que terminar de estudar aquele tópico, clique no botão **"Concluir"** (ou "Entregar"). O sistema salva automaticamente e te dá os pontos.
-    
-    **Passo 4: Contribua (Opcional)**
-    Achou um resumo legal no Drive? Um vídeo bom no YouTube? Clique em **"📂 Conteúdo Extra"** e cole o link para ajudar seus colegas.
+    * **100 XP** por dia concluído no prazo.
+    * O topo da semana mostra a soma (ex: 300/600 XP).
+    * Tente fechar a semana com 100% de aproveitamento!
     """)
-    
-    st.divider()
-    
-    st.markdown("### 3️⃣ Exemplo Visual")
-    st.write("Abaixo está um exemplo de como uma tarefa aparece para você:")
-    
-    # Exemplo visual estático (HTML puro para demonstração)
-    st.markdown("""
-    <div style="display: flex; gap: 15px; align-items: stretch; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif; opacity: 0.8;">
-        <div style="flex: 0 0 100px; background-color: #f7f7f7; border: 2px solid #e5e5e5; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; color: #afafaf;">
-            <div style="font-size: 10px; font-weight: bold;">PRAZO</div>
-            <div style="font-size: 24px;">📅</div>
-            <div style="font-size: 12px; font-weight: bold;">Sex</div>
-            <div style="font-size: 14px; font-weight: bold;">20/02</div>
-        </div>
-        <div style="flex: 1; background-color: #ffffff; border: 2px solid #e5e5e5; border-radius: 12px; padding: 15px;">
-            <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; margin-bottom: 5px;">Preventiva & Pediatria</div>
-            <div style="font-size: 13px; color: #888;">1. Imunizações | 2. Vigilância em Saúde | 3. Revisão</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    st.caption("☝️ Este é apenas um exemplo ilustrativo.")
