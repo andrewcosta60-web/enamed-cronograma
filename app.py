@@ -28,6 +28,17 @@ st.markdown("""
         margin-top: 4px;
         box-shadow: none;
     }
+    
+    /* Classe para as Caixas (Estilo Unificado) */
+    .info-box {
+        border-radius: 12px;
+        padding: 10px;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+        height: 100%; /* Tenta alinhar altura */
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -97,7 +108,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (ESTRUTURA REFEITA E BLINDADA)
+# ABA 1: LIÇÕES (CAIXAS SEPARADAS)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -114,76 +125,71 @@ with tab1:
         hoje = date.today()
         data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
         
+        # Cores Padrão (Tema)
+        cor_tema_bg = "#ffffff"
+        cor_tema_border = "#e5e5e5"
+        
         if status:
             # FEITO
-            cor_borda = "#58cc02"
-            bg_data = "#e6fffa" 
-            texto_data = "#58cc02"
+            cor_data_border = "#58cc02"
+            cor_data_bg = "#e6fffa" 
+            cor_data_text = "#58cc02"
             label = "FEITO"
             icone = "✅"
+            # Opcional: Deixar a borda do tema verde também se quiser indicar sucesso geral
+            cor_tema_border = "#58cc02" 
         elif hoje > data_alvo_dt:
             # ATRASADO
-            cor_borda = "#ffc800"
-            bg_data = "#fff5d1"
-            texto_data = "#d4a000"
+            cor_data_border = "#ffc800"
+            cor_data_bg = "#fff5d1"
+            cor_data_text = "#d4a000"
             label = "ATRASADO"
             icone = "⚠️"
+            cor_tema_border = "#ffc800"
         else:
             # NORMAL
-            cor_borda = "#e5e5e5"
-            bg_data = "#f7f7f7"
-            texto_data = "#afafaf"
+            cor_data_border = "#e5e5e5"
+            cor_data_bg = "#f7f7f7"
+            cor_data_text = "#afafaf"
             label = "PRAZO"
             icone = "📅"
 
-        # --- HTML REFEITO (ESTILO LIMPO) ---
-        st.markdown(f"""
-        <div style="display: flex; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
-            
-            <div style="
-                width: 100px;
-                min-width: 100px;
-                background-color: {bg_data};
-                border: 2px solid {cor_borda};
-                border-right: none; /* Cola na direita */
-                border-radius: 16px 0 0 16px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                padding: 10px;
-                color: {texto_data};
+        # --- LAYOUT EM COLUNAS (SEPARADAS) ---
+        # Usamos colunas nativas do Streamlit para evitar que o HTML se misture
+        col_data, col_tema = st.columns([1, 3])
+        
+        with col_data:
+            st.markdown(f"""
+            <div class="info-box" style="
+                background-color: {cor_data_bg};
+                border: 2px solid {cor_data_border};
                 text-align: center;
+                min-height: 100px; /* Altura fixa para ficar bonito */
+                color: {cor_data_text};
             ">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 4px; letter-spacing: 1px;">{label}</div>
-                <div style="font-size: 20px;">{icone}</div>
-                <div style="font-size: 14px; font-weight: bold; margin-top: 4px;">{row['Data_Alvo'][5:]}</div>
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">{label}</div>
+                <div style="font-size: 24px;">{icone}</div>
+                <div style="font-size: 14px; font-weight: bold; margin-top: 5px;">{row['Data_Alvo'][5:]}</div>
             </div>
-
-            <div style="
-                flex-grow: 1;
-                background-color: #ffffff !important; /* Branco Forçado */
-                border: 2px solid {cor_borda};
-                border-left: 1px solid #eee;
-                border-radius: 0 16px 16px 0;
-                padding: 15px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                min-width: 0;
+            """, unsafe_allow_html=True)
+            
+        with col_tema:
+            st.markdown(f"""
+            <div class="info-box" style="
+                background-color: {cor_tema_bg};
+                border: 2px solid {cor_tema_border};
+                min-height: 100px; /* Mesma altura da data */
             ">
-                <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.2;">
+                <div style="font-size: 18px; font-weight: bold; color: #4b4b4b; line-height: 1.2;">
                     {row['Tema']}
                 </div>
-                <div style="font-size: 13px; color: #888; margin-top: 5px; line-height: 1.4;">
+                <div style="font-size: 13px; color: #888; margin-top: 8px; line-height: 1.4;">
                     {row['Detalhes']}
                 </div>
             </div>
+            """, unsafe_allow_html=True)
 
-        </div>
-        """, unsafe_allow_html=True)
-
-        # LÓGICA DE AÇÕES
+        # LÓGICA DE AÇÕES (Botões embaixo)
         c1, c2 = st.columns([3, 1])
         with c1:
             with st.expander("📂 Acessar conteúdo extra"): 
@@ -215,6 +221,8 @@ with tab1:
                         df.at[real_idx, f"{current_user}_Status"] = True
                         df.at[real_idx, f"{current_user}_Date"] = hoje_str
                         save_data(df); st.balloons(); st.rerun()
+        
+        st.write("") # Espaço entre tarefas
 
 # ==========================================================
 # ABA 2: RANKING
@@ -251,14 +259,4 @@ with tab3:
     st.write("Adicionar Tarefa")
     with st.form("add"):
         c1, c2 = st.columns(2)
-        s = c1.text_input("Semana", value="Semana 02")
-        d = c2.date_input("Data")
-        t = st.text_input("Tema")
-        dt = st.text_input("Detalhes")
-        if st.form_submit_button("Salvar"):
-            nid = df["ID"].max() + 1 if not df.empty else 1
-            nrow = {"ID": nid, "Semana": s, "Data_Alvo": str(d), "Tema": t, "Detalhes": dt, "Link_Questões": ""}
-            for u in USERS:
-                nrow[f"{u}_Status"] = False; nrow[f"{u}_Date"] = None
-            df = pd.concat([df, pd.DataFrame([nrow])], ignore_index=True)
-            save_data(df); st.success("Ok!"); st.rerun()
+        s = c1.
