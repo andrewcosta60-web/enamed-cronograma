@@ -28,18 +28,6 @@ st.markdown("""
         margin-top: 4px;
         box-shadow: none;
     }
-    
-    /* Classe para as Caixas (Estilo Unificado e Alinhado) */
-    .info-box {
-        border-radius: 12px;
-        padding: 15px;
-        box-shadow: 0 4px 0 rgba(0,0,0,0.05);
-        height: 100%; /* Força altura total */
-        min-height: 110px; /* Altura mínima igual para ambos */
-        display: flex;
-        flex-direction: column;
-        justify-content: center; /* Centraliza conteúdo verticalmente */
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -109,7 +97,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (CAIXAS SEPARADAS E ALINHADAS)
+# ABA 1: LIÇÕES (AJUSTE DE ALTURA E SIMETRIA)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -127,66 +115,98 @@ with tab1:
         data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
         
         # Cores Padrão (Tema)
-        cor_tema_bg = "#ffffff"
-        cor_tema_border = "#e5e5e5"
+        bg_tema = "#ffffff"
+        border_tema = "#e5e5e5"
         
         if status:
             # FEITO
-            cor_data_border = "#58cc02"
-            cor_data_bg = "#e6fffa" 
-            cor_data_text = "#58cc02"
+            border_data = "#58cc02"
+            bg_data = "#e6fffa" 
+            text_data = "#58cc02"
             label = "FEITO"
             icone = "✅"
-            cor_tema_border = "#58cc02" # Borda verde também no tema
+            border_tema = "#58cc02"
         elif hoje > data_alvo_dt:
             # ATRASADO
-            cor_data_border = "#ffc800"
-            cor_data_bg = "#fff5d1"
-            cor_data_text = "#d4a000"
+            border_data = "#ffc800"
+            bg_data = "#fff5d1"
+            text_data = "#d4a000"
             label = "ATRASADO"
             icone = "⚠️"
-            cor_tema_border = "#ffc800"
+            border_tema = "#ffc800"
         else:
             # NORMAL
-            cor_data_border = "#e5e5e5"
-            cor_data_bg = "#f7f7f7"
-            cor_data_text = "#afafaf"
+            border_data = "#e5e5e5"
+            bg_data = "#f7f7f7"
+            text_data = "#afafaf"
             label = "PRAZO"
             icone = "📅"
 
-        # --- LAYOUT EM COLUNAS (SEPARADAS) ---
-        col_data, col_tema = st.columns([1, 3])
-        
-        with col_data:
-            st.markdown(f"""
-            <div class="info-box" style="
-                background-color: {cor_data_bg};
-                border: 2px solid {cor_data_border};
+        # --- HTML GABARITADO ---
+        # align-items: stretch -> Garante que ambas as caixas tenham exatamente a mesma altura
+        st.markdown(f"""
+        <div style="
+            display: flex; 
+            flex-direction: row; 
+            gap: 12px; 
+            align-items: stretch; /* Alinha a altura pelo maior elemento */
+            width: 100%; 
+            margin-bottom: 15px; 
+            font-family: 'Varela Round', sans-serif;
+        ">
+            <div style="
+                flex: 0 0 90px; /* Largura fixa reduzida */
+                background-color: {bg_data};
+                border: 2px solid {border_data};
+                border-radius: 16px;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
                 text-align: center;
-                color: {cor_data_text};
+                color: {text_data};
+                padding: 8px; /* Padding reduzido para compactar */
+                box-shadow: 0 2px 0 rgba(0,0,0,0.05);
             ">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 5px; letter-spacing: 1px;">{label}</div>
-                <div style="font-size: 24px;">{icone}</div>
-                <div style="font-size: 14px; font-weight: bold; margin-top: 5px;">{row['Data_Alvo'][5:]}</div>
+                <div style="font-size: 9px; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px;">{label}</div>
+                <div style="font-size: 18px; margin-bottom: 2px;">{icone}</div>
+                <div style="font-size: 13px; font-weight: bold;">{row['Data_Alvo'][5:]}</div>
             </div>
-            """, unsafe_allow_html=True)
-            
-        with col_tema:
-            st.markdown(f"""
-            <div class="info-box" style="
-                background-color: {cor_tema_bg};
-                border: 2px solid {cor_tema_border};
+
+            <div style="
+                flex: 1; 
+                background-color: {bg_tema};
+                border: 2px solid {border_tema};
+                border-radius: 16px;
+                padding: 12px 15px; /* Espaçamento interno equilibrado */
+                display: flex;
+                flex-direction: column;
+                justify-content: center; /* Centraliza o texto verticalmente */
+                box-shadow: 0 2px 0 rgba(0,0,0,0.05);
+                min-width: 0;
             ">
-                <div style="font-size: 18px; font-weight: bold; color: #4b4b4b; line-height: 1.2;">
+                <div style="
+                    font-size: 16px; 
+                    font-weight: bold; 
+                    color: #4b4b4b; 
+                    margin-bottom: 4px; 
+                    line-height: 1.2;
+                ">
                     {row['Tema']}
                 </div>
-                <div style="font-size: 13px; color: #888; margin-top: 8px; line-height: 1.4;">
+                <div style="
+                    font-size: 12px; 
+                    color: #888; 
+                    line-height: 1.4;
+                ">
                     {row['Detalhes']}
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            
+        </div>
+        """, unsafe_allow_html=True)
 
-        # LÓGICA DE AÇÕES (Botões embaixo)
+        # LÓGICA DE AÇÕES
         c1, c2 = st.columns([3, 1])
         with c1:
             with st.expander("📂 Acessar conteúdo extra"): 
@@ -219,7 +239,7 @@ with tab1:
                         df.at[real_idx, f"{current_user}_Date"] = hoje_str
                         save_data(df); st.balloons(); st.rerun()
         
-        st.write("") # Espaço entre tarefas
+        st.write("") 
 
 # ==========================================================
 # ABA 2: RANKING
