@@ -5,7 +5,7 @@ import os
 import html
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Enamed Game", page_icon="🦉", layout="centered")
+st.set_page_config(page_title="Enamed Extensivo", page_icon="🧘", layout="centered")
 
 # --- CSS GLOBAL ---
 st.markdown("""
@@ -38,56 +38,117 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
-CSV_FILE = "enamed_data.csv"
+CSV_FILE = "enamed_extensivo.csv" # Nome novo para evitar conflito
 DEFAULT_USERS = [] 
 
 # Avatares
 AVATARS = [
-    "👨‍⚕️", "👩‍⚕️", "🦉", "🧠", "🫀", "🧬", "🚑", "🏥", "💉", "💊", 
-    "🦠", "🩸", "🎓", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🚀", "💡", "🔥"
+    "👨‍⚕️", "👩‍⚕️", "🧘", "☕", "🧠", "🫀", "🧬", "🚑", "🏥", "💉", 
+    "💊", "🦠", "🩸", "🎓", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖"
 ]
 
 # Tradução Dias
 DIAS_PT = {0: "Seg", 1: "Ter", 2: "Qua", 3: "Qui", 4: "Sex", 5: "Sáb", 6: "Dom"}
 
-# --- CRONOGRAMA COMPLETO ---
+# --- CRONOGRAMA EXTENSIVO COMPLETO (48 SEMANAS) ---
 FULL_SCHEDULE = [
-    ("Semana 01", "Pediatria - Imunizações", "Calendário Vacinal 2026, Vacinas vivas x inativadas."),
-    ("Semana 01", "Preventiva - SUS", "Princípios Doutrinários e Organizativos, Lei 8080/90."),
-    ("Semana 02", "Cirurgia - Trauma (ATLS)", "Avaliação Primária (ABCDE), Trauma Torácico e Abdominal."),
-    ("Semana 02", "Ginecologia - Ciclo Menstrual", "Fisiologia, Hormônios e Amenorreias Primárias."),
-    ("Semana 03", "Cardiologia - Hipertensão", "Diagnóstico, Estadiamento e Tratamento Farmacológico."),
-    ("Semana 03", "Obstetrícia - Diagnóstico de Gravidez", "Sinais de Presunção, Probabilidade e Certeza. Modificações Maternas."),
-    ("Semana 04", "Nefrologia - Distúrbios Ácido-Base", "Acidose/Alcalose Metabólica e Respiratória. Gasometria."),
-    ("Semana 04", "Pediatria - Crescimento e Desenv.", "Marcos do desenvolvimento, Curvas de Crescimento (Z-score)."),
-    ("Semana 05", "Gastroenterologia - DRGE e Dispepsia", "Diagnóstico diferencial, H. pylori, Tratamento clínico."),
-    ("Semana 05", "Preventiva - Vigilância em Saúde", "Notificação Compulsória (Lista Nacional), Invest. de Surtos."),
-    ("Semana 06", "Cirurgia - Hérnias da Parede Abd.", "Inguinais, Femorais, Umbilical. Classificação de Nyhus."),
-    ("Semana 06", "Infectologia - HIV/AIDS", "Diagnóstico, Estadiamento, Tratamento Antirretroviral e IOs."),
-    ("Semana 07", "Obstetrícia - Sangramentos 1ª Metade", "Abortamento, Gravidez Ectópica, Doença Trofoblástica."),
-    ("Semana 07", "Pneumologia - Asma e DPOC", "Diferenciação, Espirometria, GOLD e GINA."),
-    ("Semana 08", "Endocrinologia - Diabetes Mellitus", "Rastreio, Diagnóstico, Insulinas e Antidiabéticos Orais."),
-    ("Semana 08", "Pediatria - Aleitamento Materno", "Fisiologia, Técnica, Contraindicações e Alimentação Comp."),
+    # --- MÓDULO 1: BASES (Semanas 1-8) ---
+    ("Semana 01", "Preventiva - SUS: História e Princípios", "Lei 8080/90, Lei 8142, Princípios Doutrinários."),
+    ("Semana 01", "Pediatria - Imunizações I", "Calendário Vacinal da Criança (PNI atualizado)."),
+    ("Semana 02", "Cirurgia - Trauma: ABCDE", "Avaliação Primária, Vias Aéreas e Choque."),
+    ("Semana 02", "Ginecologia - Ciclo Menstrual", "Eixo HHA, Fases do Ciclo e Hormônios."),
+    ("Semana 03", "Obstetrícia - Diagnóstico de Gravidez", "Sinais de Presunção, Probabilidade e Certeza. Modificações."),
+    ("Semana 03", "Cardiologia - Hipertensão Arterial", "Diagnóstico, Metas pressóricas e Drogas de 1ª linha."),
+    ("Semana 04", "Pediatria - Crescimento", "Curvas da OMS (Z-score) e Marcos do Desenvolvimento."),
+    ("Semana 04", "Nefrologia - Distúrbios Ácido-Base", "Gasometria Arterial: Acidose e Alcalose."),
+    ("Semana 05", "Cirurgia - Hérnias Abdominais", "Inguinais (Nyhus), Femorais e Umbilicais."),
+    ("Semana 05", "Gastro - DRGE e Dispepsia", "Indicações de EDA, Tratamento clínico e cirúrgico."),
+    ("Semana 06", "Infectologia - Arboviroses", "Dengue (Classificação A-D), Zika e Chikungunya."),
+    ("Semana 06", "Preventiva - Vigilância em Saúde", "Notificação Compulsória (Lista Nacional)."),
+    ("Semana 07", "Obstetrícia - Pré-Natal", "Rotina de consultas, Exames e Suplementação."),
+    ("Semana 07", "Pneumologia - Asma", "Diagnóstico, Classificação GINA e Tratamento."),
+    ("Semana 08", "Endócrino - Diabetes Mellitus", "Diagnóstico, Pré-DM e Tratamento inicial (Metformina)."),
+    ("Semana 08", "Pediatria - Aleitamento Materno", "Técnica, Fisiologia e Contraindicações."),
+
+    # --- MÓDULO 2: INTERMEDIÁRIO (Semanas 9-20) ---
+    ("Semana 09", "Ginecologia - Anticoncepção", "Critérios de Elegibilidade OMS, LARC e Combinados."),
     ("Semana 09", "Reumatologia - Artrites", "Artrite Reumatoide vs Osteoartrite vs Gota."),
-    ("Semana 09", "Ginecologia - Anticoncepção", "Métodos Comportamentais, Hormonais, DIU e LARC."),
-    ("Semana 10", "Cirurgia - Coloproctologia", "Câncer Colorretal, Doença Diverticular, Hemorroidas."),
-    ("Semana 10", "Psiquiatria - Transtornos de Humor", "Depressão Maior, TAB, Ansiedade Generalizada."),
-    ("Semana 11", "Hematologia - Anemias", "Ferropriva, Megaloblástica, Hemolíticas e Talassemias."),
-    ("Semana 11", "Preventiva - Estudos Epidemiológicos", "Coorte, Caso-Controle, Transversal, Ensaio Clínico."),
-    ("Semana 12", "Obstetrícia - Sangramentos 2ª Metade", "Placenta Prévia, DPP, Rotura Uterina, Vasa Prévia."),
+    ("Semana 10", "SEMANA DE CATCH-UP 🧘", "Colocar a matéria em dia ou descansar."),
+    ("Semana 10", "SEMANA DE CATCH-UP 🧘", "Colocar a matéria em dia ou descansar."),
+    
+    ("Semana 11", "Cirurgia - Coloproctologia", "Câncer Colorretal, Diverticulite e Hemorroidas."),
+    ("Semana 11", "Psiquiatria - Transtornos de Humor", "Depressão Maior e Bipolaridade."),
+    ("Semana 12", "Obstetrícia - Sangramentos 1ª Metade", "Abortamento, Ectópica e Mola."),
     ("Semana 12", "Pediatria - Doenças Exantemáticas", "Sarampo, Rubéola, Varicela, Eritema Infeccioso."),
-    ("Semana 13", "Neurologia - AVC", "Isquêmico x Hemorrágico, Trombólise, Manejo Agudo."),
-    ("Semana 13", "Cirurgia - Trauma Cranioencefálico", "Escala de Glasgow, Indicações de TC, HIC."),
-    ("Semana 14", "Ginecologia - Climaterio", "Terapia de Reposição Hormonal, Osteoporose."),
+    ("Semana 13", "Neurologia - AVC", "Isquêmico x Hemorrágico, Trombólise."),
+    ("Semana 13", "Cirurgia - Trauma Cranioencefálico", "Glasgow, Indicações de TC, Hematomas."),
+    ("Semana 14", "Ginecologia - Climatério", "Terapia Hormonal e Osteoporose."),
     ("Semana 14", "Nefrologia - Glomerulopatias", "Síndrome Nefrítica x Nefrótica."),
-    ("Semana 15", "Cardiologia - Insuficiência Cardíaca", "ICFER x ICFEP, Classificação NYHA e AHA."),
-    ("Semana 15", "Preventiva - Medidas de Saúde", "Mortalidade Materna, Infantil, Swaroop-Uemura."),
-    ("Semana 16", "Pediatria - Respiratório", "Pneumonias, Bronquiolite, Crupe, Epiglotite."),
-    ("Semana 16", "Obstetrícia - Doença Hipertensiva", "Pré-eclâmpsia, Eclâmpsia, Síndrome HELLP."),
-    ("Semana 17", "REVISÃO GERAL - CLÍNICA", "Top 5 temas de Clínica Médica + Questões."),
-    ("Semana 18", "REVISÃO GERAL - CIRURGIA", "Top 5 temas de Cirurgia + Questões."),
-    ("Semana 19", "REVISÃO GERAL - PEDIATRIA", "Top 5 temas de Pediatria + Questões."),
-    ("Semana 20", "REVISÃO GERAL - G.O.", "Top 5 temas de Ginecologia e Obstetrícia + Questões.")
+    ("Semana 15", "Cardiologia - Insuficiência Cardíaca", "ICFER x ICFEP, Tratamento Quádruplo."),
+    ("Semana 15", "Preventiva - Estudos Epidemiológicos", "Coorte, Caso-Controle, Transversal, Ensaio."),
+    ("Semana 16", "Pediatria - Respiratório", "Pneumonias, Bronquiolite e Crupe."),
+    ("Semana 16", "Obstetrícia - Doença Hipertensiva", "Pré-eclâmpsia, Eclâmpsia e HELLP."),
+    ("Semana 17", "Gastro - Hepatologia", "Cirrose, Ascite e Encefalopatia."),
+    ("Semana 17", "Hematologia - Anemias", "Ferropriva, Megaloblástica e Hemolíticas."),
+    ("Semana 18", "Infectologia - HIV/AIDS", "Diagnóstico, TARV e Infecções Oportunistas."),
+    ("Semana 18", "Cirurgia - Vesícula e Vias Biliares", "Colelitíase, Colecistite e Colangite."),
+    ("Semana 19", "Ginecologia - Infecções Ginecológicas", "Vaginose, Candidíase, Tricomoníase, DIP."),
+    ("Semana 19", "Ortopedia - Fraturas e Lombalgia", "Fraturas comuns (Rádio, Fêmur) e Hérnia de Disco."),
+    
+    # --- MÓDULO 3: AVANÇADO (Semanas 20-35) ---
+    ("Semana 20", "SEMANA DE CATCH-UP 🧘", "Respiro e Revisão."),
+    ("Semana 20", "SEMANA DE CATCH-UP 🧘", "Respiro e Revisão."),
+
+    ("Semana 21", "Preventiva - Medidas de Saúde", "Mortalidade Materna/Infantil, Letalidade."),
+    ("Semana 21", "Pediatria - Neonatologia I", "Reanimação Neonatal e Sala de Parto."),
+    ("Semana 22", "Cirurgia - Trauma Abdominal", "Trauma Fechado (Baço/Fígado) x Penetrante."),
+    ("Semana 22", "Endócrino - Tireoide", "Hipo/Hipertireoidismo e Nódulos."),
+    ("Semana 23", "Obstetrícia - Sangramentos 2ª Metade", "Placenta Prévia e DPP."),
+    ("Semana 23", "Urologia - Litíase Renal", "Cólica Nefrética e Tratamentos."),
+    ("Semana 24", "Psiquiatria - Psicoses e Ansiedade", "Esquizofrenia, TAG e Pânico."),
+    ("Semana 24", "Dermatologia - Câncer de Pele", "Basocelular, Espinocelular e Melanoma."),
+    ("Semana 25", "Ginecologia - Câncer de Colo e Mama", "Rastreio (Preventivo/Mamografia) e BIRADS."),
+    ("Semana 25", "Otorrino - IVAS", "Otites, Sinusites e Faringites."),
+    ("Semana 26", "Pediatria - Gastrointestinal", "Diarreia Aguda, Desidratação e TRO."),
+    ("Semana 26", "Preventiva - Atenção Primária", "Atributos da APS, PNAB, Medicina de Família."),
+    ("Semana 27", "Cardiologia - Coronariopatias", "IAM com e sem Supra, Angina Instável."),
+    ("Semana 27", "Cirurgia - Pré e Pós-Operatório", "Risco Cirúrgico e Complicações da Ferida."),
+    ("Semana 28", "Nefrologia - Injúria Renal Aguda", "Pré-renal, NTA e Pós-renal."),
+    ("Semana 28", "Reumatologia - Vasculites e LES", "Lúpus e Arterite de Células Gigantes."),
+    ("Semana 29", "Obstetrícia - Parto", "Mecanismo de Parto, Partograma e Distócias."),
+    ("Semana 29", "Infectologia - Tuberculose", "Diagnóstico e Tratamento (RIPE)."),
+    ("Semana 30", "SEMANA DE CATCH-UP 🧘", "Colocar a matéria em dia."),
+    ("Semana 30", "SEMANA DE CATCH-UP 🧘", "Colocar a matéria em dia."),
+
+    # --- MÓDULO 4: RETA FINAL & ESPECIALIDADES (Semanas 31-48) ---
+    ("Semana 31", "Neurologia - Cefaleias e Epilepsia", "Migrânea, Tensional e Crise Convulsiva."),
+    ("Semana 31", "Pediatria - Neonatologia II", "Icterícia e Distúrbios Respiratórios."),
+    ("Semana 32", "Ginecologia - Sangramento Uterino", "PALM-COEIN, Miomas e Endometriose."),
+    ("Semana 32", "Cirurgia - Vascular", "Oclusão Arterial Aguda e TVP/TEP."),
+    ("Semana 33", "Preventiva - Ética e Medicina Legal", "Código de Ética, Atestados e Declaração de Óbito."),
+    ("Semana 33", "Pneumologia - Pneumonias e TEP", "PAC (CURB-65) e Embolia Pulmonar."),
+    ("Semana 34", "Obstetrícia - Puerpério e Infecções", "Infecção Puerperal, Mastite e TORCH."),
+    ("Semana 34", "Endócrino - Adrenal e Hipófise", "Cushing, Addison e Prolactinoma."),
+    ("Semana 35", "Gastro - Pâncreas", "Pancreatite Aguda e Crônica."),
+    ("Semana 35", "Cirurgia - Trauma Torácico", "Pneumotórax, Tamponamento e Tórax Instável."),
+    
+    ("Semana 36", "REVISÃO: Clínica Médica I", "Cardio, Nefro e Pneumo."),
+    ("Semana 36", "REVISÃO: Clínica Médica II", "Gastro, Endócrino e Reumato."),
+    ("Semana 37", "REVISÃO: Cirurgia Geral", "Trauma e Abdome Agudo."),
+    ("Semana 37", "REVISÃO: Pediatria", "Imuno, Neo e Crescimento."),
+    ("Semana 38", "REVISÃO: Ginecologia", "Ciclo, Sangramentos e Mama."),
+    ("Semana 38", "REVISÃO: Obstetrícia", "Pré-natal, Sangramentos e Parto."),
+    ("Semana 39", "REVISÃO: Preventiva", "SUS e Epidemiologia."),
+    ("Semana 39", "REVISÃO: Especialidades", "Psiquiatria, Neuro, Dermato, Orto."),
+    
+    ("Semana 40", "SIMULADO GERAL 1", "Prova completa de 100 questões."),
+    ("Semana 40", "CORREÇÃO DE LACUNAS", "Estudo dirigido dos erros."),
+    ("Semana 41", "SIMULADO GERAL 2", "Prova completa de 100 questões."),
+    ("Semana 41", "CORREÇÃO DE LACUNAS", "Estudo dirigido dos erros."),
+    
+    # Semanas finais livres para provas na vida real
+    ("Semana 42", "Reta Final: Temas Quentes", "Revisão rápida dos temas mais cobrados."),
+    ("Semana 42", "Reta Final: Temas Quentes", "Revisão rápida dos temas mais cobrados.")
 ]
 
 # --- FUNÇÕES ---
@@ -112,6 +173,8 @@ def init_db():
         initial_data = []
         for i, item in enumerate(FULL_SCHEDULE):
             semana_label, tema, detalhes = item
+            
+            # Lógica: 2 tarefas por semana (Segunda e Quinta)
             week_num = i // 2
             days_add = (week_num * 7) + (0 if i % 2 == 0 else 3) 
             task_date = start_date + timedelta(days=days_add)
@@ -164,8 +227,9 @@ if "logged_user" not in st.session_state:
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns([1, 6, 1])
         with c2:
-            st.markdown("<div style='text-align: center; font-size: 80px;'>🦉</div>", unsafe_allow_html=True)
-            st.markdown("<h1 style='text-align: center;'>Desafio Enamed</h1>", unsafe_allow_html=True)
+            st.markdown("<div style='text-align: center; font-size: 80px;'>🧘</div>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align: center;'>Enamed Extensivo</h1>", unsafe_allow_html=True)
+            st.caption("<div style='text-align: center;'>Ciclo Anual • Consistência > Intensidade</div>", unsafe_allow_html=True)
             
             tab_login, tab_register = st.tabs(["🔑 Entrar", "➕ Novo Participante"])
             
@@ -202,7 +266,7 @@ current_user = st.session_state["logged_user"]
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🦉</div>", unsafe_allow_html=True)
+    st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🧘</div>", unsafe_allow_html=True)
     st.markdown(f"### Olá, **{current_user}**! 👋")
     if st.button("Sair"):
         del st.session_state["logged_user"]
@@ -215,14 +279,17 @@ with st.sidebar:
             total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
     st.metric("💎 XP Total", f"{total_xp}")
 
-st.title("🦉 Desafio Enamed")
+st.title("🧘 Ciclo Extensivo")
 
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # --- ABA 1: LIÇÕES ---
 with tab1:
     semanas = df["Semana"].unique()
-    sem = st.selectbox("Módulo:", semanas)
+    # Tenta selecionar a semana atual automaticamente
+    default_week_index = 0
+    
+    sem = st.selectbox("Módulo:", semanas, index=default_week_index)
     df_view = df[df["Semana"] == sem]
 
     for index, row in df_view.iterrows():
@@ -270,29 +337,18 @@ with tab1:
 
         c1, c2 = st.columns([3, 1])
         with c1:
-            # === AQUI ESTÁ A ALTERAÇÃO PARA CONTRIBUIÇÃO ===
-            # Icone de "+" adicionado no título
             with st.expander("📂 Conteúdo Extra / Contribuir ➕"):
                 current_link = row['Link_Questões']
-                
-                # Se existe link, mostra ele bonitinho
                 if current_link:
-                    st.markdown(f"🔗 **Link Atual:** [{current_link}]({current_link})")
-                    st.caption("Deseja alterar o link? Cole o novo abaixo.")
+                    st.markdown(f"🔗 **Link:** [{current_link}]({current_link})")
                 else:
-                    st.info("Nenhum material adicionado ainda. Seja o primeiro!")
+                    st.info("Nenhum material ainda.")
 
-                # Campo para QUALQUER UM adicionar/editar
-                new_link = st.text_input("Colar Link do Drive/Questões:", key=f"l_{row['ID']}")
-                if st.button("💾 Salvar Link", key=f"s_{row['ID']}"):
+                new_link = st.text_input("Colar Link:", key=f"l_{row['ID']}")
+                if st.button("💾 Salvar", key=f"s_{row['ID']}"):
                     if new_link:
                         df.at[real_idx, "Link_Questões"] = new_link
-                        save_data(df)
-                        st.success("Link atualizado com sucesso!")
-                        st.rerun()
-                    else:
-                        st.warning("Cole um link válido.")
-
+                        save_data(df); st.success("Atualizado!"); st.rerun()
         with c2:
             if status:
                 st.success(f"✅ FEITO! (+{pontos})")
@@ -309,7 +365,7 @@ with tab1:
 
 # --- ABA 2: PLACAR ---
 with tab2:
-    st.subheader("🏆 Classificação")
+    st.subheader("🏆 Classificação Anual")
     placar = []
     for u in ALL_USERS:
         pts, tasks = 0, 0
@@ -345,8 +401,8 @@ with tab3:
             save_data(df); st.success("Ok!"); st.rerun()
 
     st.divider()
-    if st.button("🗑️ ZERAR BANCO DE DADOS (Limpar Tudo)", type="primary"):
+    if st.button("🗑️ ZERAR BANCO DE DADOS (Carregar Extensivo)", type="primary"):
         if os.path.exists(CSV_FILE):
             os.remove(CSV_FILE)
             for k in list(st.session_state.keys()): del st.session_state[k]
-            st.warning("Banco apagado! Atualize a página."); st.rerun()
+            st.warning("Banco reiniciado para o Ciclo Extensivo! Atualize a página."); st.rerun()
