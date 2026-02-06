@@ -29,38 +29,56 @@ st.markdown("""
         margin-top: 4px;
         box-shadow: none;
     }
-
-    /* Caixa de Login */
-    .login-box {
-        background-color: #f0f2f6;
-        padding: 40px;
-        border-radius: 20px;
-        text-align: center;
-        margin-top: 50px;
+    
+    /* Input de Texto no Login */
+    .stTextInput > div > div > input {
+        border-radius: 10px;
     }
     </style>
 """, unsafe_allow_html=True)
 
-# --- DADOS E VARIÁVEIS ---
-USERS = ["Dr. Ana", "Dr. Bruno", "Dr. Carlos", "Dr. Daniel"]
+# --- CONFIGURAÇÕES ---
 CSV_FILE = "enamed_data.csv"
+# Usuários iniciais padrão (caso o arquivo seja criado do zero)
+DEFAULT_USERS = ["Dr. Andrew", "Dr. Pedro", "Dr. Ramon", "Dr. Clodoaldo", "Dra. Allana"]
 
 # --- FUNÇÕES ---
+
+def get_users_from_df(df):
+    """Descobre quem são os usuários olhando as colunas do arquivo"""
+    users = []
+    for col in df.columns:
+        if col.endswith("_Status"):
+            user_name = col.replace("_Status", "")
+            users.append(user_name)
+    return sorted(users)
+
 def init_db():
+    """Cria o arquivo CSV se não existir, com os usuários padrão"""
     if not os.path.exists(CSV_FILE):
-        df = pd.DataFrame(columns=[
-            "ID", "Semana", "Data_Alvo", "Tema", "Detalhes", "Link_Questões",
-            "Dr. Ana_Status", "Dr. Ana_Date",
-            "Dr. Bruno_Status", "Dr. Bruno_Date",
-            "Dr. Carlos_Status", "Dr. Carlos_Date",
-            "Dr. Daniel_Status", "Dr. Daniel_Date"
-        ])
-        initial_data = [
-            [1, "Semana 01", "2026-02-20", "Pediatria - Imunizações", "Foco: Calendário 0-15 meses.", "", False, None, False, None, False, None, False, None],
-            [2, "Semana 01", "2026-02-21", "Preventiva - Vigilância", "Notificação Compulsória.", "", False, None, False, None, False, None, False, None],
-        ]
-        for row in initial_data:
-            df.loc[len(df)] = row
+        # Colunas base
+        cols = ["ID", "Semana", "Data_Alvo", "Tema", "Detalhes", "Link_Questões"]
+        # Cria colunas para cada usuário padrão
+        for user in DEFAULT_USERS:
+            cols.extend([f"{user}_Status", f"{user}_Date"])
+            
+        df = pd.DataFrame(columns=cols)
+        
+        # Dados iniciais de exemplo
+        initial_data = []
+        # Linha 1
+        row1 = [1, "Semana 01", "2026-02-20", "Pediatria - Imunizações", "Foco: Calendário 0-15 meses.", ""]
+        for _ in DEFAULT_USERS: row1.extend([False, None])
+        initial_data.append(row1)
+        
+        # Linha 2
+        row2 = [2, "Semana 01", "2026-02-21", "Preventiva - Vigilância", "Notificação Compulsória.", ""]
+        for _ in DEFAULT_USERS: row2.extend([False, None])
+        initial_data.append(row2)
+
+        for r in initial_data:
+            df.loc[len(df)] = r
+            
         df.to_csv(CSV_FILE, index=False)
 
 def load_data():
@@ -69,6 +87,19 @@ def load_data():
 
 def save_data(df):
     df.to_csv(CSV_FILE, index=False)
+
+def add_new_user(df, new_name):
+    """Adiciona colunas para um novo usuário no DataFrame e Salva"""
+    # Verifica se já existe
+    if f"{new_name}_Status" in df.columns:
+        return df, False, "Usuário já existe!"
+    
+    # Cria as colunas
+    df[f"{new_name}_Status"] = False
+    df[f"{new_name}_Date"] = None
+    
+    save_data(df)
+    return df, True, "Usuário criado com sucesso!"
 
 def calculate_xp(target, completed_at):
     if pd.isna(completed_at) or str(completed_at) == "None" or str(completed_at) == "":
@@ -81,54 +112,77 @@ def calculate_xp(target, completed_at):
     except: return 0
 
 # --- INICIALIZAÇÃO ---
+# Carrega dados
 df = load_data()
+# Obtém lista atualizada de usuários do banco
+ALL_USERS = get_users_from_df(df)
 
-# --- LÓGICA DE LOGIN (SESSÃO) ---
-# Se não tiver usuário na sessão, verifica URL ou mostra tela de login
+# --- TELA DE LOGIN ---
 if "logged_user" not in st.session_state:
-    # 1. Tenta pegar da URL (Login Automático via Link)
+    # Verifica URL
     qp = st.query_params
-    if "user" in qp and qp["user"] in USERS:
+    if "user" in qp and qp["user"] in ALL_USERS:
         st.session_state["logged_user"] = qp["user"]
         st.rerun()
     
-    # 2. Se não tem URL, Mostra TELA DE LOGIN
     else:
-        st.markdown("<br><br>", unsafe_allow_html=True)
-        col1, col2, col3 = st.columns([1, 2, 1])
-        with col2:
-            st.image("https://d35aaqx5ub95lt.cloudfront.net/images/leagues/0e3ed60b2999bed9b757e7eb22f300c1.svg", width=150)
+        st.markdown("<br>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns([1, 6, 1])
+        with c2:
+            st.image("https://d35aaqx5ub95lt.cloudfront.net/images/leagues/0e3ed60b2999bed9b757e7eb22f300c1.svg", width=120)
             st.title("Desafio Enamed")
-            st.markdown("### Bem-vindo(a)!")
             
-            user_input = st.selectbox("Selecione seu perfil:", USERS)
+            tab_login, tab_register = st.tabs(["🔑 Entrar", "➕ Novo Participante"])
             
-            if st.button("🚀 ENTRAR", type="primary"):
-                st.session_state["logged_user"] = user_input
-                st.rerun()
-        
-        st.stop() # Para o código aqui se não estiver logado
+            # ABA DE LOGIN
+            with tab_login:
+                st.write("### Quem é você?")
+                user_input = st.selectbox("Selecione seu perfil:", ALL_USERS)
+                if st.button("🚀 ENTRAR", type="primary"):
+                    st.session_state["logged_user"] = user_input
+                    st.rerun()
 
-# --- SE CHEGOU AQUI, O USUÁRIO ESTÁ LOGADO ---
+            # ABA DE CADASTRO
+            with tab_register:
+                st.write("### Criar novo perfil")
+                new_user_name = st.text_input("Digite seu nome (Ex: Dr. João)")
+                
+                if st.button("Salvar e Entrar"):
+                    if new_user_name and len(new_user_name) > 3:
+                        df, success, msg = add_new_user(df, new_user_name)
+                        if success:
+                            st.success(msg)
+                            st.session_state["logged_user"] = new_user_name
+                            st.rerun()
+                        else:
+                            st.error(msg)
+                    else:
+                        st.warning("Digite um nome válido.")
+        
+        st.stop()
+
+# --- APP PRINCIPAL (SÓ CARREGA SE LOGADO) ---
 current_user = st.session_state["logged_user"]
 
-# --- SIDEBAR (PERFIL FIXO) ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.image("https://d35aaqx5ub95lt.cloudfront.net/images/leagues/0e3ed60b2999bed9b757e7eb22f300c1.svg", width=100)
     st.markdown(f"### Olá, **{current_user}**! 👋")
     
-    # Botão de Sair
-    if st.button("Sair / Trocar Conta"):
+    if st.button("Sair"):
         del st.session_state["logged_user"]
-        st.query_params.clear() # Limpa URL para não relogar automático
+        st.query_params.clear()
         st.rerun()
 
     st.divider()
-    
     total_xp = 0
+    # Recalcula XP
     for idx, row in df.iterrows():
-        total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
-    st.metric("💎 Seu XP Total", f"{total_xp}")
+        # Verifica se a coluna do usuário existe (segurança)
+        if f"{current_user}_Date" in df.columns:
+            total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
+            
+    st.metric("💎 XP Total", f"{total_xp}")
 
 st.title("🦉 Desafio Enamed")
 
@@ -136,7 +190,7 @@ st.title("🦉 Desafio Enamed")
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES
+# ABA 1: LIÇÕES (VISUAL GABARITADO)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -145,16 +199,20 @@ with tab1:
 
     for index, row in df_view.iterrows():
         real_idx = df[df["ID"] == row["ID"]].index[0]
+        
+        # Garante que as colunas do usuário atual existam (caso bugue)
+        if f"{current_user}_Status" not in df.columns:
+            st.error("Erro no perfil. Tente relogar.")
+            continue
+
         status = row[f"{current_user}_Status"]
         data_gravada = row[f"{current_user}_Date"]
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
-        # --- CORES E STATUS ---
+        # --- CORES ---
         hoje = date.today()
-        try:
-            data_alvo_dt = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
-        except:
-            data_alvo_dt = date.today()
+        try: data_alvo_dt = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
+        except: data_alvo_dt = date.today()
         
         bg_tema = "#ffffff"
         border_tema = "#e5e5e5"
@@ -184,7 +242,7 @@ with tab1:
         detalhes_txt = html.escape(str(row['Detalhes']))
         data_txt = str(row['Data_Alvo'])[5:]
 
-        # --- HTML DO CARD ---
+        # --- HTML VISUAL ---
         html_content = f"""
 <div style="display: flex; gap: 15px; align-items: stretch; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
 <div style="flex: 0 0 100px; background-color: {bg_data}; border: 2px solid {border_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; color: {text_data}; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
@@ -236,19 +294,23 @@ with tab1:
         st.write("") 
 
 # ==========================================================
-# ABA 2: RANKING
+# ABA 2: RANKING (DINÂMICO)
 # ==========================================================
 with tab2:
     st.subheader("🏆 Classificação")
     placar = []
-    for u in USERS:
+    
+    # Itera sobre TODOS os usuários encontrados no banco
+    for u in ALL_USERS:
         pts = 0
         tasks = 0
         for i, r in df.iterrows():
-            p = calculate_xp(r["Data_Alvo"], r[f"{u}_Date"])
-            if p > 0:
-                pts += p
-                tasks += 1
+            # Segurança: verifica se colunas existem
+            if f"{u}_Date" in df.columns:
+                p = calculate_xp(r["Data_Alvo"], r[f"{u}_Date"])
+                if p > 0:
+                    pts += p
+                    tasks += 1
         placar.append({"Médico": u, "XP": pts, "Tarefas": tasks})
         
     df_p = pd.DataFrame(placar).sort_values("XP", ascending=False).reset_index(drop=True)
@@ -277,7 +339,10 @@ with tab3:
         if st.form_submit_button("Salvar"):
             nid = df["ID"].max() + 1 if not df.empty else 1
             nrow = {"ID": nid, "Semana": s, "Data_Alvo": str(d), "Tema": t, "Detalhes": dt, "Link_Questões": ""}
-            for u in USERS:
-                nrow[f"{u}_Status"] = False; nrow[f"{u}_Date"] = None
+            # Cria colunas vazias para todos os usuários atuais
+            for u in ALL_USERS:
+                nrow[f"{u}_Status"] = False
+                nrow[f"{u}_Date"] = None
+            
             df = pd.concat([df, pd.DataFrame([nrow])], ignore_index=True)
             save_data(df); st.success("Ok!"); st.rerun()
