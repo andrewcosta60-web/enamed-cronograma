@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timedelta, date
+from datetime import datetime, date, timedelta
 import os
 import html
 
@@ -39,7 +39,7 @@ st.markdown("""
 
 # --- CONFIGURAÇÕES ---
 CSV_FILE = "enamed_data.csv"
-DEFAULT_USERS = [] # Começa vazio, cadastre na tela inicial
+DEFAULT_USERS = [] 
 
 # Avatares
 AVATARS = [
@@ -50,10 +50,8 @@ AVATARS = [
 # Tradução Dias
 DIAS_PT = {0: "Seg", 1: "Ter", 2: "Qua", 3: "Qui", 4: "Sex", 5: "Sáb", 6: "Dom"}
 
-# --- CRONOGRAMA COMPLETO (BASE DE DADOS) ---
-# Lista de tuplas: (Semana, Tema, Detalhes)
+# --- CRONOGRAMA COMPLETO ---
 FULL_SCHEDULE = [
-    # MÓDULO 1: INTRODUÇÃO E BASE
     ("Semana 01", "Pediatria - Imunizações", "Calendário Vacinal 2026, Vacinas vivas x inativadas."),
     ("Semana 01", "Preventiva - SUS", "Princípios Doutrinários e Organizativos, Lei 8080/90."),
     ("Semana 02", "Cirurgia - Trauma (ATLS)", "Avaliação Primária (ABCDE), Trauma Torácico e Abdominal."),
@@ -62,8 +60,6 @@ FULL_SCHEDULE = [
     ("Semana 03", "Obstetrícia - Diagnóstico de Gravidez", "Sinais de Presunção, Probabilidade e Certeza. Modificações Maternas."),
     ("Semana 04", "Nefrologia - Distúrbios Ácido-Base", "Acidose/Alcalose Metabólica e Respiratória. Gasometria."),
     ("Semana 04", "Pediatria - Crescimento e Desenv.", "Marcos do desenvolvimento, Curvas de Crescimento (Z-score)."),
-    
-    # MÓDULO 2: APROFUNDAMENTO CLÍNICO
     ("Semana 05", "Gastroenterologia - DRGE e Dispepsia", "Diagnóstico diferencial, H. pylori, Tratamento clínico."),
     ("Semana 05", "Preventiva - Vigilância em Saúde", "Notificação Compulsória (Lista Nacional), Invest. de Surtos."),
     ("Semana 06", "Cirurgia - Hérnias da Parede Abd.", "Inguinais, Femorais, Umbilical. Classificação de Nyhus."),
@@ -72,8 +68,6 @@ FULL_SCHEDULE = [
     ("Semana 07", "Pneumologia - Asma e DPOC", "Diferenciação, Espirometria, GOLD e GINA."),
     ("Semana 08", "Endocrinologia - Diabetes Mellitus", "Rastreio, Diagnóstico, Insulinas e Antidiabéticos Orais."),
     ("Semana 08", "Pediatria - Aleitamento Materno", "Fisiologia, Técnica, Contraindicações e Alimentação Comp."),
-
-    # MÓDULO 3: ESPECIALIDADES E CIRURGIA
     ("Semana 09", "Reumatologia - Artrites", "Artrite Reumatoide vs Osteoartrite vs Gota."),
     ("Semana 09", "Ginecologia - Anticoncepção", "Métodos Comportamentais, Hormonais, DIU e LARC."),
     ("Semana 10", "Cirurgia - Coloproctologia", "Câncer Colorretal, Doença Diverticular, Hemorroidas."),
@@ -82,8 +76,6 @@ FULL_SCHEDULE = [
     ("Semana 11", "Preventiva - Estudos Epidemiológicos", "Coorte, Caso-Controle, Transversal, Ensaio Clínico."),
     ("Semana 12", "Obstetrícia - Sangramentos 2ª Metade", "Placenta Prévia, DPP, Rotura Uterina, Vasa Prévia."),
     ("Semana 12", "Pediatria - Doenças Exantemáticas", "Sarampo, Rubéola, Varicela, Eritema Infeccioso."),
-
-    # MÓDULO 4: RETA FINAL E TEMAS COMPLEXOS
     ("Semana 13", "Neurologia - AVC", "Isquêmico x Hemorrágico, Trombólise, Manejo Agudo."),
     ("Semana 13", "Cirurgia - Trauma Cranioencefálico", "Escala de Glasgow, Indicações de TC, HIC."),
     ("Semana 14", "Ginecologia - Climaterio", "Terapia de Reposição Hormonal, Osteoporose."),
@@ -92,8 +84,6 @@ FULL_SCHEDULE = [
     ("Semana 15", "Preventiva - Medidas de Saúde", "Mortalidade Materna, Infantil, Swaroop-Uemura."),
     ("Semana 16", "Pediatria - Respiratório", "Pneumonias, Bronquiolite, Crupe, Epiglotite."),
     ("Semana 16", "Obstetrícia - Doença Hipertensiva", "Pré-eclâmpsia, Eclâmpsia, Síndrome HELLP."),
-    
-    # MÓDULO 5: REVISÃO
     ("Semana 17", "REVISÃO GERAL - CLÍNICA", "Top 5 temas de Clínica Médica + Questões."),
     ("Semana 18", "REVISÃO GERAL - CIRURGIA", "Top 5 temas de Cirurgia + Questões."),
     ("Semana 19", "REVISÃO GERAL - PEDIATRIA", "Top 5 temas de Pediatria + Questões."),
@@ -111,24 +101,17 @@ def get_users_from_df(df):
     return sorted(users)
 
 def init_db():
-    """Gera o banco de dados com o Cronograma Completo"""
     if not os.path.exists(CSV_FILE):
         cols = ["ID", "Semana", "Data_Alvo", "Tema", "Detalhes", "Link_Questões"]
         for user in DEFAULT_USERS:
             cols.extend([f"{user}_Status", f"{user}_Date"])
             
         df = pd.DataFrame(columns=cols)
-        
-        # Gerar datas automaticamente a partir de hoje
         start_date = date.today()
         
         initial_data = []
         for i, item in enumerate(FULL_SCHEDULE):
             semana_label, tema, detalhes = item
-            
-            # Lógica de Data: 2 tarefas por semana (Segunda e Quinta)
-            # Se for par (0, 2, 4...) adiciona dias para Segunda
-            # Se for ímpar (1, 3, 5...) adiciona dias para Quinta da mesma semana
             week_num = i // 2
             days_add = (week_num * 7) + (0 if i % 2 == 0 else 3) 
             task_date = start_date + timedelta(days=days_add)
@@ -238,7 +221,6 @@ tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # --- ABA 1: LIÇÕES ---
 with tab1:
-    # Filtro de Semanas (Mostra todas as semanas disponíveis no banco)
     semanas = df["Semana"].unique()
     sem = st.selectbox("Módulo:", semanas)
     df_view = df[df["Semana"] == sem]
@@ -288,12 +270,29 @@ with tab1:
 
         c1, c2 = st.columns([3, 1])
         with c1:
-            with st.expander("📂 Conteúdo Extra"):
-                if row['Link_Questões']: st.markdown(f"🔗 [Abrir Material]({row['Link_Questões']})")
-                else: 
-                    l = st.text_input("Link:", key=f"l_{row['ID']}")
-                    if st.button("Salvar", key=f"s_{row['ID']}"):
-                        df.at[real_idx, "Link_Questões"] = l; save_data(df); st.rerun()
+            # === AQUI ESTÁ A ALTERAÇÃO PARA CONTRIBUIÇÃO ===
+            # Icone de "+" adicionado no título
+            with st.expander("📂 Conteúdo Extra / Contribuir ➕"):
+                current_link = row['Link_Questões']
+                
+                # Se existe link, mostra ele bonitinho
+                if current_link:
+                    st.markdown(f"🔗 **Link Atual:** [{current_link}]({current_link})")
+                    st.caption("Deseja alterar o link? Cole o novo abaixo.")
+                else:
+                    st.info("Nenhum material adicionado ainda. Seja o primeiro!")
+
+                # Campo para QUALQUER UM adicionar/editar
+                new_link = st.text_input("Colar Link do Drive/Questões:", key=f"l_{row['ID']}")
+                if st.button("💾 Salvar Link", key=f"s_{row['ID']}"):
+                    if new_link:
+                        df.at[real_idx, "Link_Questões"] = new_link
+                        save_data(df)
+                        st.success("Link atualizado com sucesso!")
+                        st.rerun()
+                    else:
+                        st.warning("Cole um link válido.")
+
         with c2:
             if status:
                 st.success(f"✅ FEITO! (+{pontos})")
@@ -351,4 +350,3 @@ with tab3:
             os.remove(CSV_FILE)
             for k in list(st.session_state.keys()): del st.session_state[k]
             st.warning("Banco apagado! Atualize a página."); st.rerun()
-        
