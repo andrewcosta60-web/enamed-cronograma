@@ -6,8 +6,8 @@ import html
 import io
 import csv
 
-# --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Enamed Oficial", page_icon="🦉", layout="centered")
+# --- CONFIGURAÇÃO DA PÁGINA (Ícone da aba alterado) ---
+st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="centered")
 
 # --- CSS GLOBAL ---
 st.markdown("""
@@ -184,7 +184,8 @@ if "logged_user" not in st.session_state:
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns([1, 6, 1])
         with c2:
-            st.markdown("<div style='text-align: center; font-size: 80px;'>🦉</div>", unsafe_allow_html=True)
+            # Ícone de Hospital no Login
+            st.markdown("<div style='text-align: center; font-size: 80px;'>🏥</div>", unsafe_allow_html=True)
             st.markdown("<h1 style='text-align: center;'>Enamed Oficial</h1>", unsafe_allow_html=True)
             st.caption("<div style='text-align: center;'>Cronograma 2026 • 42 Semanas</div>", unsafe_allow_html=True)
             
@@ -223,7 +224,8 @@ current_user = st.session_state["logged_user"]
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🦉</div>", unsafe_allow_html=True)
+    # Ícone de Hospital na Sidebar
+    st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
     st.markdown(f"### Olá, **{current_user}**! 👋")
     if st.button("Sair"):
         del st.session_state["logged_user"]
@@ -236,7 +238,7 @@ with st.sidebar:
             total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
     st.metric("💎 XP Total", f"{total_xp}")
 
-st.title("🦉 Desafio Enamed")
+st.title("🏥 Desafio Enamed")
 
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
@@ -251,8 +253,7 @@ with tab1:
     for sem in semanas:
         df_view = df[df["Semana"] == sem]
         
-        # Determina se o expander deve começar aberto (opcional: apenas a semana atual ou a primeira)
-        # Aqui, vamos deixar todos fechados para limpeza visual, ou o primeiro aberto.
+        # Determina se o expander deve começar aberto (apenas a primeira semana)
         start_open = (sem == semanas[0]) 
         
         # Cria um Expander para a semana
