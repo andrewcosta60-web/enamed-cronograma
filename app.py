@@ -29,6 +29,15 @@ st.markdown("""
         margin-top: 4px;
         box-shadow: none;
     }
+
+    /* Caixa de Login */
+    .login-box {
+        background-color: #f0f2f6;
+        padding: 40px;
+        border-radius: 20px;
+        text-align: center;
+        margin-top: 50px;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -72,33 +81,62 @@ def calculate_xp(target, completed_at):
     except: return 0
 
 # --- INICIALIZAÇÃO ---
-st.title("🦉 Desafio Enamed")
 df = load_data()
 
-# Login Fixo
-qp = st.query_params
-default_idx = 0
-if "user" in qp:
-    try:
-        if qp["user"] in USERS: default_idx = USERS.index(qp["user"])
-    except: pass
+# --- LÓGICA DE LOGIN (SESSÃO) ---
+# Se não tiver usuário na sessão, verifica URL ou mostra tela de login
+if "logged_user" not in st.session_state:
+    # 1. Tenta pegar da URL (Login Automático via Link)
+    qp = st.query_params
+    if "user" in qp and qp["user"] in USERS:
+        st.session_state["logged_user"] = qp["user"]
+        st.rerun()
+    
+    # 2. Se não tem URL, Mostra TELA DE LOGIN
+    else:
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.image("https://d35aaqx5ub95lt.cloudfront.net/images/leagues/0e3ed60b2999bed9b757e7eb22f300c1.svg", width=150)
+            st.title("Desafio Enamed")
+            st.markdown("### Bem-vindo(a)!")
+            
+            user_input = st.selectbox("Selecione seu perfil:", USERS)
+            
+            if st.button("🚀 ENTRAR", type="primary"):
+                st.session_state["logged_user"] = user_input
+                st.rerun()
+        
+        st.stop() # Para o código aqui se não estiver logado
 
-# --- SIDEBAR ---
+# --- SE CHEGOU AQUI, O USUÁRIO ESTÁ LOGADO ---
+current_user = st.session_state["logged_user"]
+
+# --- SIDEBAR (PERFIL FIXO) ---
 with st.sidebar:
     st.image("https://d35aaqx5ub95lt.cloudfront.net/images/leagues/0e3ed60b2999bed9b757e7eb22f300c1.svg", width=100)
-    current_user = st.selectbox("Quem é você?", USERS, index=default_idx)
-    if current_user != st.query_params.get("user"): st.query_params["user"] = current_user
+    st.markdown(f"### Olá, **{current_user}**! 👋")
+    
+    # Botão de Sair
+    if st.button("Sair / Trocar Conta"):
+        del st.session_state["logged_user"]
+        st.query_params.clear() # Limpa URL para não relogar automático
+        st.rerun()
+
     st.divider()
+    
     total_xp = 0
     for idx, row in df.iterrows():
         total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
-    st.metric("💎 XP Total", f"{total_xp}")
+    st.metric("💎 Seu XP Total", f"{total_xp}")
+
+st.title("🦉 Desafio Enamed")
 
 # --- ABAS ---
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (CORRIGIDO PARA NÃO MOSTRAR CÓDIGO)
+# ABA 1: LIÇÕES
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -111,19 +149,17 @@ with tab1:
         data_gravada = row[f"{current_user}_Date"]
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
-        # --- DEFINIÇÃO DE CORES ---
+        # --- CORES E STATUS ---
         hoje = date.today()
         try:
             data_alvo_dt = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
         except:
             data_alvo_dt = date.today()
         
-        # Cores Base
         bg_tema = "#ffffff"
         border_tema = "#e5e5e5"
         
         if status:
-            # FEITO
             border_data = "#58cc02"
             bg_data = "#e6fffa" 
             text_data = "#58cc02"
@@ -131,7 +167,6 @@ with tab1:
             icone = "✅"
             border_tema = "#58cc02"
         elif hoje > data_alvo_dt:
-            # ATRASADO
             border_data = "#ffc800"
             bg_data = "#fff5d1"
             text_data = "#d4a000"
@@ -139,19 +174,17 @@ with tab1:
             icone = "⚠️"
             border_tema = "#ffc800"
         else:
-            # NORMAL
             border_data = "#e5e5e5"
             bg_data = "#f7f7f7"
             text_data = "#afafaf"
             label = "PRAZO"
             icone = "📅"
 
-        # Tratamento de texto para evitar quebra do HTML
         tema_txt = html.escape(str(row['Tema']))
         detalhes_txt = html.escape(str(row['Detalhes']))
         data_txt = str(row['Data_Alvo'])[5:]
 
-        # --- HTML CONSTRUÍDO SEM INDENTAÇÃO (PARA NÃO APARECER CÓDIGO NA TELA) ---
+        # --- HTML DO CARD ---
         html_content = f"""
 <div style="display: flex; gap: 15px; align-items: stretch; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
 <div style="flex: 0 0 100px; background-color: {bg_data}; border: 2px solid {border_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; color: {text_data}; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
@@ -167,7 +200,7 @@ with tab1:
 """
         st.markdown(html_content, unsafe_allow_html=True)
 
-        # LÓGICA DE AÇÕES
+        # AÇÕES
         c1, c2 = st.columns([3, 1])
         with c1:
             with st.expander("📂 Acessar conteúdo extra"): 
