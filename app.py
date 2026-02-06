@@ -97,7 +97,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (CAIXAS REFEITAS E BLINDADAS)
+# ABA 1: LIÇÕES (ESTRUTURA REFEITA E BLINDADA)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -136,17 +136,16 @@ with tab1:
             label = "PRAZO"
             icone = "📅"
 
-        # --- HTML (REFEITO DO ZERO) ---
-        # Container Pai Flexivel
+        # --- HTML REFEITO (ESTILO LIMPO) ---
         st.markdown(f"""
         <div style="display: flex; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
             
             <div style="
                 width: 100px;
-                min-width: 100px; /* Garante tamanho fixo */
+                min-width: 100px;
                 background-color: {bg_data};
                 border: 2px solid {cor_borda};
-                border-right: none; /* Remove borda direita para colar */
+                border-right: none; /* Cola na direita */
                 border-radius: 16px 0 0 16px;
                 display: flex;
                 flex-direction: column;
@@ -162,16 +161,16 @@ with tab1:
             </div>
 
             <div style="
-                flex-grow: 1; /* Ocupa todo o resto do espaço */
-                background-color: white; /* Garante fundo branco */
+                flex-grow: 1;
+                background-color: #ffffff !important; /* Branco Forçado */
                 border: 2px solid {cor_borda};
-                border-left: 1px solid #eee; /* Linha divisória sutil */
+                border-left: 1px solid #eee;
                 border-radius: 0 16px 16px 0;
                 padding: 15px;
                 display: flex;
                 flex-direction: column;
                 justify-content: center;
-                overflow: hidden; /* Evita vazamento */
+                min-width: 0;
             ">
                 <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.2;">
                     {row['Tema']}
