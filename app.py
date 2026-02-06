@@ -6,7 +6,7 @@ import os
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Game", page_icon="🦉", layout="centered")
 
-# --- CSS (ESTÉTICA) ---
+# --- CSS (ESTÉTICA CORRIGIDA) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -20,9 +20,10 @@ st.markdown("""
         background-color: #ffffff;
         border: 2px solid #e5e5e5;
         border-radius: 16px;
-        padding: 15px;
-        margin-bottom: 10px;
+        padding: 0px; /* Padding zero para controlar tudo dentro */
+        margin-bottom: 15px;
         box-shadow: 0 4px 0 #e5e5e5;
+        overflow: hidden; /* Garante que nada saia das bordas arredondadas */
     }
     
     /* Botões */
@@ -58,7 +59,6 @@ def init_db():
         initial_data = [
             [1, "Semana 01", "2026-02-20", "Pediatria - Imunizações", "Foco: Calendário 0-15 meses.", "", False, None, False, None, False, None, False, None],
             [2, "Semana 01", "2026-02-21", "Preventiva - Vigilância", "Notificação Compulsória.", "", False, None, False, None, False, None, False, None],
-            [3, "Semana 01", "2026-02-23", "Obstetrícia - Pré-Natal", "Rotina e Exames.", "", False, None, False, None, False, None, False, None],
         ]
         for row in initial_data:
             df.loc[len(df)] = row
@@ -98,20 +98,17 @@ with st.sidebar:
     st.image("https://d35aaqx5ub95lt.cloudfront.net/images/leagues/0e3ed60b2999bed9b757e7eb22f300c1.svg", width=100)
     current_user = st.selectbox("Quem é você?", USERS, index=default_idx)
     if current_user != st.query_params.get("user"): st.query_params["user"] = current_user
-    
     st.divider()
-    
     total_xp = 0
     for idx, row in df.iterrows():
         total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
-    
     st.metric("💎 XP Total", f"{total_xp}")
 
 # --- ABAS ---
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES
+# ABA 1: LIÇÕES (VISUAL CORRIGIDO)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -120,84 +117,113 @@ with tab1:
 
     for index, row in df_view.iterrows():
         real_idx = df[df["ID"] == row["ID"]].index[0]
-        
         status = row[f"{current_user}_Status"]
         data_gravada = row[f"{current_user}_Date"]
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
-        # --- LÓGICA DA CAIXA DE DATA AMARELA ---
+        # Lógica de Cores
         hoje = date.today()
         data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
         
-        # Se NÃO FEZ (status False) E DATA JÁ PASSOU (hoje > alvo)
-        if not status and hoje > data_alvo_dt:
-            # Estilo Amarelo de Alerta
-            date_box_style = "background-color: #fff3cd; border: 2px solid #ffecb5; border-radius: 8px; color: #856404;"
-            date_label = "ATRASADO"
+        # Definindo estilos baseados no estado
+        if status:
+            # FEITO (Verde Claro)
+            cor_fundo_card = "#f7fff7"
+            cor_borda = "#58cc02"
+            cor_box_data = "transparent"
+            cor_texto_data = "#58cc02"
+            label_data = "FEITO"
+            icone_data = "✅"
+        elif hoje > data_alvo_dt:
+            # ATRASADO (Branco com caixa amarela)
+            cor_fundo_card = "#ffffff"
+            cor_borda = "#e5e5e5"
+            cor_box_data = "#fff3cd" # Fundo Amarelo
+            cor_texto_data = "#856404" # Texto Amarelo Escuro
+            label_data = "ATRASADO"
+            icone_data = "⚠️"
         else:
-            # Estilo Normal
-            date_box_style = "border-right: 2px solid #eee;"
-            date_label = "PRAZO"
-        
-        # Borda verde no card se feito
-        card_style = 'border-color: #58cc02; background-color: #f7fff7;' if status else ''
-        
-        with st.container():
-            st.markdown(f"""
-            <div class="task-card" style="{card_style}">
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div style="flex:1; text-align:center; padding: 5px; {date_box_style}">
-                        <span style="font-size:10px; opacity: 0.7;">{date_label}</span><br>
-                        <b style="font-size: 16px;">{row['Data_Alvo'][5:]}</b>
-                    </div>
-                    
-                    <div style="flex:4; padding-left:15px;">
-                        <span style="font-size:18px; font-weight:bold; color:#4b4b4b;">{row['Tema']}</span><br>
-                        <span style="font-size:14px; color:#777;">{row['Detalhes']}</span>
-                    </div>
+            # NO PRAZO (Padrão)
+            cor_fundo_card = "#ffffff"
+            cor_borda = "#e5e5e5"
+            cor_box_data = "#f0f0f0" # Cinza bem clarinho
+            cor_texto_data = "#888888"
+            label_data = "PRAZO"
+            icone_data = "📅"
+
+        # HTML DO CARD (Com CSS Inline para garantir que não bugue)
+        st.markdown(f"""
+        <div style="
+            background-color: {cor_fundo_card}; 
+            border: 2px solid {cor_borda}; 
+            border-radius: 16px; 
+            margin-bottom: 10px; 
+            box-shadow: 0 4px 0 #e5e5e5;
+            display: flex;
+            align-items: stretch; /* Garante altura igual */
+            overflow: hidden;
+        ">
+            <div style="
+                width: 90px;
+                min-width: 90px; 
+                background-color: {cor_box_data}; 
+                color: {cor_texto_data};
+                display: flex;
+                flex-direction: column;
+                justify-content: center;
+                align-items: center;
+                text-align: center;
+                padding: 10px;
+                border-right: 1px solid #eee;
+            ">
+                <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px;">{label_data}</div>
+                <div style="font-size: 20px;">{icone_data}</div>
+                <div style="font-size: 14px; font-weight: bold;">{row['Data_Alvo'][5:]}</div>
+            </div>
+
+            <div style="flex-grow: 1; padding: 15px; display: flex; flex-direction: column; justify-content: center;">
+                <div style="font-size: 18px; font-weight: bold; color: #4b4b4b; line-height: 1.2;">
+                    {row['Tema']}
+                </div>
+                <div style="font-size: 13px; color: #777; margin-top: 4px;">
+                    {row['Detalhes']}
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+        </div>
+        """, unsafe_allow_html=True)
 
-            c1, c2 = st.columns([3, 1])
-            with c1:
-                with st.expander("📂 Acessar conteúdo extra"): 
-                    if row['Link_Questões']: st.markdown(f"🔗 [Abrir Questões]({row['Link_Questões']})")
-                    else: 
-                        nl = st.text_input("Link:", key=f"l_{row['ID']}")
-                        if st.button("Salvar", key=f"sl_{row['ID']}"):
-                            df.at[real_idx, "Link_Questões"] = nl
-                            save_data(df); st.rerun()
-            
-            with c2:
-                if status:
-                    st.success(f"✅ FEITO! (+{pontos_garantidos})")
-                    if st.button("🔄 Refazer", key=f"re_{row['ID']}", help="Praticar de novo"):
-                        df.at[real_idx, f"{current_user}_Status"] = False
+        # LÓGICA DE AÇÕES (Abaixo do Card)
+        c1, c2 = st.columns([3, 1])
+        with c1:
+            with st.expander("📂 Acessar conteúdo extra"): 
+                if row['Link_Questões']: st.markdown(f"🔗 [Abrir Questões]({row['Link_Questões']})")
+                else: 
+                    nl = st.text_input("Link:", key=f"l_{row['ID']}")
+                    if st.button("Salvar", key=f"sl_{row['ID']}"):
+                        df.at[real_idx, "Link_Questões"] = nl
                         save_data(df); st.rerun()
-
+        
+        with c2:
+            if status:
+                st.success(f"✅ FEITO! (+{pontos_garantidos})")
+                if st.button("🔄 Refazer", key=f"re_{row['ID']}"):
+                    df.at[real_idx, f"{current_user}_Status"] = False
+                    save_data(df); st.rerun()
+            else:
+                if pontos_garantidos > 0:
+                    if st.button("✅ Concluir", key=f"chk2_{row['ID']}"):
+                        df.at[real_idx, f"{current_user}_Status"] = True
+                        save_data(df); st.rerun()
+                    st.markdown(f"<div style='text-align:center; font-size:11px; color:#999;'>↺ XP: {pontos_garantidos}</div>", unsafe_allow_html=True)
                 else:
-                    if pontos_garantidos > 0:
-                        if st.button("✅ Concluir (De novo)", key=f"chk2_{row['ID']}"):
-                            df.at[real_idx, f"{current_user}_Status"] = True
-                            save_data(df); st.rerun()
-                        
-                        st.markdown(f"""
-                            <div style="text-align:center; font-size:11px; color:#999; margin-top:-5px;">
-                                ↺ Revisando (XP: {pontos_garantidos})
-                            </div>
-                        """, unsafe_allow_html=True)
-
-                    else:
-                        hoje_str = str(date.today())
-                        atrasado = hoje > data_alvo_dt
-                        lbl = "Concluir" if not atrasado else "Entregar"
-                        btn_type = "primary" if not atrasado else "secondary"
-                        
-                        if st.button(lbl, key=f"chk_{row['ID']}", type=btn_type):
-                            df.at[real_idx, f"{current_user}_Status"] = True
-                            df.at[real_idx, f"{current_user}_Date"] = hoje_str
-                            save_data(df); st.balloons(); st.rerun()
+                    hoje_str = str(date.today())
+                    atrasado = hoje > data_alvo_dt
+                    lbl = "Concluir" if not atrasado else "Entregar"
+                    btn_type = "primary" if not atrasado else "secondary"
+                    if st.button(lbl, key=f"chk_{row['ID']}", type=btn_type):
+                        df.at[real_idx, f"{current_user}_Status"] = True
+                        df.at[real_idx, f"{current_user}_Date"] = hoje_str
+                        save_data(df); st.balloons(); st.rerun()
 
 # ==========================================================
 # ABA 2: RANKING
