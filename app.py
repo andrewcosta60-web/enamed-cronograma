@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime, date
 import os
-import html  # Importante para evitar bugs de texto
+import html
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Game", page_icon="🦉", layout="centered")
@@ -16,7 +16,7 @@ st.markdown("""
         font-family: 'Varela Round', sans-serif;
     }
     
-    /* Botões Padrão */
+    /* Botões */
     .stButton > button {
         border-radius: 12px;
         font-weight: bold;
@@ -98,7 +98,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (CORREÇÃO DE BUG HTML)
+# ABA 1: LIÇÕES (CORRIGIDO PARA NÃO MOSTRAR CÓDIGO)
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -116,9 +116,9 @@ with tab1:
         try:
             data_alvo_dt = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
         except:
-            data_alvo_dt = date.today() # Fallback
+            data_alvo_dt = date.today()
         
-        # Cores
+        # Cores Base
         bg_tema = "#ffffff"
         border_tema = "#e5e5e5"
         
@@ -146,66 +146,26 @@ with tab1:
             label = "PRAZO"
             icone = "📅"
 
-        # --- LIMPEZA DE TEXTO (EVITA BUG DE CÓDIGO) ---
-        # Usamos html.escape para garantir que nenhum caractere estranho quebre o HTML
-        tema_limpo = html.escape(str(row['Tema']))
-        detalhes_limpo = html.escape(str(row['Detalhes']))
-        data_formatada = str(row['Data_Alvo'])[5:]
+        # Tratamento de texto para evitar quebra do HTML
+        tema_txt = html.escape(str(row['Tema']))
+        detalhes_txt = html.escape(str(row['Detalhes']))
+        data_txt = str(row['Data_Alvo'])[5:]
 
-        # --- HTML BLINDADO ---
-        card_html = f"""
-        <div style="
-            display: flex; 
-            flex-direction: row; 
-            gap: 12px; 
-            align-items: stretch; 
-            width: 100%; 
-            margin-bottom: 10px; 
-            font-family: 'Varela Round', sans-serif;
-            box-sizing: border-box;
-        ">
-            <div style="
-                flex: 0 0 95px;
-                background-color: {bg_data};
-                border: 2px solid {border_data};
-                border-radius: 16px;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                justify-content: center;
-                text-align: center;
-                color: {text_data};
-                padding: 5px;
-                box-shadow: 0 2px 0 rgba(0,0,0,0.05);
-            ">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px;">{label}</div>
-                <div style="font-size: 20px; margin-bottom: 2px;">{icone}</div>
-                <div style="font-size: 13px; font-weight: bold;">{data_formatada}</div>
-            </div>
-
-            <div style="
-                flex: 1;
-                background-color: {bg_tema};
-                border: 2px solid {border_tema};
-                border-radius: 16px;
-                padding: 10px 15px;
-                display: flex;
-                flex-direction: column;
-                justify-content: center;
-                box-shadow: 0 2px 0 rgba(0,0,0,0.05);
-                min-width: 0;
-            ">
-                <div style="font-size: 16px; font-weight: bold; color: #4b4b4b; margin-bottom: 4px; line-height: 1.2;">
-                    {tema_limpo}
-                </div>
-                <div style="font-size: 12px; color: #888; line-height: 1.4;">
-                    {detalhes_limpo}
-                </div>
-            </div>
-        </div>
-        """
-        
-        st.markdown(card_html, unsafe_allow_html=True)
+        # --- HTML CONSTRUÍDO SEM INDENTAÇÃO (PARA NÃO APARECER CÓDIGO NA TELA) ---
+        html_content = f"""
+<div style="display: flex; gap: 15px; align-items: stretch; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
+<div style="flex: 0 0 100px; background-color: {bg_data}; border: 2px solid {border_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; color: {text_data}; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
+<div style="font-size: 10px; font-weight: bold; margin-bottom: 5px;">{label}</div>
+<div style="font-size: 24px;">{icone}</div>
+<div style="font-size: 14px; font-weight: bold; margin-top: 5px;">{data_txt}</div>
+</div>
+<div style="flex: 1; background-color: {bg_tema}; border: 2px solid {border_tema}; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
+<div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.2; margin-bottom: 5px;">{tema_txt}</div>
+<div style="font-size: 13px; color: #888; line-height: 1.4;">{detalhes_txt}</div>
+</div>
+</div>
+"""
+        st.markdown(html_content, unsafe_allow_html=True)
 
         # LÓGICA DE AÇÕES
         c1, c2 = st.columns([3, 1])
