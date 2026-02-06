@@ -39,8 +39,8 @@ st.markdown("""
 
 # --- CONFIGURAÇÕES ---
 CSV_FILE = "enamed_data.csv"
-# Usuários iniciais padrão (caso o arquivo seja criado do zero)
-DEFAULT_USERS = ["Dr. Andrew", "Dr. Pedro", "Dr. Ramon", "Dr. Clodoaldo", "Dra. Allana"]
+# COMEÇA VAZIO (Você deve cadastrar na tela inicial)
+DEFAULT_USERS = [] 
 
 # --- FUNÇÕES ---
 
@@ -54,24 +54,24 @@ def get_users_from_df(df):
     return sorted(users)
 
 def init_db():
-    """Cria o arquivo CSV se não existir, com os usuários padrão"""
+    """Cria o arquivo CSV se não existir"""
     if not os.path.exists(CSV_FILE):
-        # Colunas base
+        # Colunas base apenas com as tarefas
         cols = ["ID", "Semana", "Data_Alvo", "Tema", "Detalhes", "Link_Questões"]
-        # Cria colunas para cada usuário padrão
+        
+        # Se houver usuários padrão, cria as colunas deles
         for user in DEFAULT_USERS:
             cols.extend([f"{user}_Status", f"{user}_Date"])
             
         df = pd.DataFrame(columns=cols)
         
-        # Dados iniciais de exemplo
+        # Dados iniciais de exemplo (Tarefas)
         initial_data = []
-        # Linha 1
+        
         row1 = [1, "Semana 01", "2026-02-20", "Pediatria - Imunizações", "Foco: Calendário 0-15 meses.", ""]
         for _ in DEFAULT_USERS: row1.extend([False, None])
         initial_data.append(row1)
         
-        # Linha 2
         row2 = [2, "Semana 01", "2026-02-21", "Preventiva - Vigilância", "Notificação Compulsória.", ""]
         for _ in DEFAULT_USERS: row2.extend([False, None])
         initial_data.append(row2)
@@ -90,7 +90,6 @@ def save_data(df):
 
 def add_new_user(df, new_name):
     """Adiciona colunas para um novo usuário no DataFrame e Salva"""
-    # Verifica se já existe
     if f"{new_name}_Status" in df.columns:
         return df, False, "Usuário já existe!"
     
@@ -112,14 +111,11 @@ def calculate_xp(target, completed_at):
     except: return 0
 
 # --- INICIALIZAÇÃO ---
-# Carrega dados
 df = load_data()
-# Obtém lista atualizada de usuários do banco
 ALL_USERS = get_users_from_df(df)
 
 # --- TELA DE LOGIN ---
 if "logged_user" not in st.session_state:
-    # Verifica URL
     qp = st.query_params
     if "user" in qp and qp["user"] in ALL_USERS:
         st.session_state["logged_user"] = qp["user"]
@@ -136,11 +132,17 @@ if "logged_user" not in st.session_state:
             
             # ABA DE LOGIN
             with tab_login:
-                st.write("### Quem é você?")
-                user_input = st.selectbox("Selecione seu perfil:", ALL_USERS)
-                if st.button("🚀 ENTRAR", type="primary"):
-                    st.session_state["logged_user"] = user_input
-                    st.rerun()
+                if not ALL_USERS:
+                    st.info("Nenhum participante encontrado. Cadastre o primeiro na aba ao lado! 👉")
+                else:
+                    st.write("### Quem é você?")
+                    user_input = st.selectbox("Selecione seu perfil:", ALL_USERS)
+                    if st.button("🚀 ENTRAR", type="primary"):
+                        if user_input:
+                            st.session_state["logged_user"] = user_input
+                            st.rerun()
+                        else:
+                            st.warning("Selecione um usuário.")
 
             # ABA DE CADASTRO
             with tab_register:
@@ -148,7 +150,7 @@ if "logged_user" not in st.session_state:
                 new_user_name = st.text_input("Digite seu nome (Ex: Dr. João)")
                 
                 if st.button("Salvar e Entrar"):
-                    if new_user_name and len(new_user_name) > 3:
+                    if new_user_name and len(new_user_name) > 2:
                         df, success, msg = add_new_user(df, new_user_name)
                         if success:
                             st.success(msg)
@@ -161,7 +163,7 @@ if "logged_user" not in st.session_state:
         
         st.stop()
 
-# --- APP PRINCIPAL (SÓ CARREGA SE LOGADO) ---
+# --- APP PRINCIPAL ---
 current_user = st.session_state["logged_user"]
 
 # --- SIDEBAR ---
@@ -176,12 +178,9 @@ with st.sidebar:
 
     st.divider()
     total_xp = 0
-    # Recalcula XP
     for idx, row in df.iterrows():
-        # Verifica se a coluna do usuário existe (segurança)
         if f"{current_user}_Date" in df.columns:
             total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
-            
     st.metric("💎 XP Total", f"{total_xp}")
 
 st.title("🦉 Desafio Enamed")
@@ -190,7 +189,7 @@ st.title("🦉 Desafio Enamed")
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (VISUAL GABARITADO)
+# ABA 1: LIÇÕES
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -200,7 +199,6 @@ with tab1:
     for index, row in df_view.iterrows():
         real_idx = df[df["ID"] == row["ID"]].index[0]
         
-        # Garante que as colunas do usuário atual existam (caso bugue)
         if f"{current_user}_Status" not in df.columns:
             st.error("Erro no perfil. Tente relogar.")
             continue
@@ -209,7 +207,6 @@ with tab1:
         data_gravada = row[f"{current_user}_Date"]
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
-        # --- CORES ---
         hoje = date.today()
         try: data_alvo_dt = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
         except: data_alvo_dt = date.today()
@@ -242,7 +239,6 @@ with tab1:
         detalhes_txt = html.escape(str(row['Detalhes']))
         data_txt = str(row['Data_Alvo'])[5:]
 
-        # --- HTML VISUAL ---
         html_content = f"""
 <div style="display: flex; gap: 15px; align-items: stretch; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
 <div style="flex: 0 0 100px; background-color: {bg_data}; border: 2px solid {border_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; color: {text_data}; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
@@ -258,7 +254,6 @@ with tab1:
 """
         st.markdown(html_content, unsafe_allow_html=True)
 
-        # AÇÕES
         c1, c2 = st.columns([3, 1])
         with c1:
             with st.expander("📂 Acessar conteúdo extra"): 
@@ -294,18 +289,16 @@ with tab1:
         st.write("") 
 
 # ==========================================================
-# ABA 2: RANKING (DINÂMICO)
+# ABA 2: RANKING
 # ==========================================================
 with tab2:
     st.subheader("🏆 Classificação")
     placar = []
     
-    # Itera sobre TODOS os usuários encontrados no banco
     for u in ALL_USERS:
         pts = 0
         tasks = 0
         for i, r in df.iterrows():
-            # Segurança: verifica se colunas existem
             if f"{u}_Date" in df.columns:
                 p = calculate_xp(r["Data_Alvo"], r[f"{u}_Date"])
                 if p > 0:
@@ -339,10 +332,22 @@ with tab3:
         if st.form_submit_button("Salvar"):
             nid = df["ID"].max() + 1 if not df.empty else 1
             nrow = {"ID": nid, "Semana": s, "Data_Alvo": str(d), "Tema": t, "Detalhes": dt, "Link_Questões": ""}
-            # Cria colunas vazias para todos os usuários atuais
             for u in ALL_USERS:
                 nrow[f"{u}_Status"] = False
                 nrow[f"{u}_Date"] = None
             
             df = pd.concat([df, pd.DataFrame([nrow])], ignore_index=True)
             save_data(df); st.success("Ok!"); st.rerun()
+
+    st.divider()
+    st.write("### 🚨 Zona de Perigo")
+    
+    # BOTÃO PARA ZERAR TUDO (OPÇÃO 2 IMPLEMENTADA)
+    if st.button("🗑️ ZERAR BANCO DE DADOS (Limpar Tudo)", type="primary"):
+        if os.path.exists(CSV_FILE):
+            os.remove(CSV_FILE) # Deleta o arquivo
+            for key in list(st.session_state.keys()):
+                del st.session_state[key] # Desloga todo mundo
+            st.warning("Banco de dados apagado! Por favor, atualize a página (F5).")
+        else:
+            st.info("O banco de dados já está limpo.")
