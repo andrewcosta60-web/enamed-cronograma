@@ -125,9 +125,9 @@ if "logged_user" not in st.session_state:
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns([1, 6, 1])
         with c2:
-            # AQUI: Substituí a imagem quebrada por um Emoji Grande
-            st.markdown("<h1 style='text-align: center;'>🦉</h1>", unsafe_allow_html=True)
-            st.title("Desafio Enamed")
+            # CORUJA GIGANTE NO LOGIN TAMBÉM
+            st.markdown("<div style='text-align: center; font-size: 80px;'>🦉</div>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align: center;'>Desafio Enamed</h1>", unsafe_allow_html=True)
             
             tab_login, tab_register = st.tabs(["🔑 Entrar", "➕ Novo Participante"])
             
@@ -182,8 +182,9 @@ current_user = st.session_state["logged_user"]
 
 # --- SIDEBAR (BARRA LATERAL) ---
 with st.sidebar:
-    # AQUI TAMBÉM: Substituí a imagem quebrada pelo Emoji
-    st.markdown("# 🦉") 
+    # --- AQUI: AUMENTAMOS A CORUJA PARA 100PX ---
+    st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🦉</div>", unsafe_allow_html=True)
+    
     st.markdown(f"### Olá, **{current_user}**! 👋")
     
     if st.button("Sair"):
@@ -304,7 +305,7 @@ with tab1:
         st.write("") 
 
 # ==========================================================
-# ABA 2: RANKING
+# ABA 2: RANKING (CORRIGIDO PARA TEXTO PRETO)
 # ==========================================================
 with tab2:
     st.subheader("🏆 Classificação")
@@ -327,6 +328,7 @@ with tab2:
         medalha = ["🥇", "🥈", "🥉", ""][i] if i < 4 else ""
         bg = "#fff5c2" if i == 0 else "#f9f9f9"
         
+        # Adicionei 'color: black' no estilo do div principal
         st.markdown(f"""
         <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; font-family: 'Varela Round', sans-serif; color: black;">
             <div><span style="font-size:20px;">{medalha}</span> <b>{row['Médico']}</b></div>
