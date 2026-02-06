@@ -6,7 +6,7 @@ import html
 import io
 import csv
 
-# --- CONFIGURAÇÃO DA PÁGINA (Ícone da aba alterado) ---
+# --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="centered")
 
 # --- CSS GLOBAL ---
@@ -35,6 +35,15 @@ st.markdown("""
     /* Input de Texto */
     .stTextInput > div > div > input {
         border-radius: 10px;
+    }
+    
+    /* Tutorial Box */
+    .tutorial-box {
+        background-color: #f0f2f6;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        border-left: 5px solid #ff4b4b;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -184,7 +193,6 @@ if "logged_user" not in st.session_state:
         st.markdown("<br>", unsafe_allow_html=True)
         c1, c2, c3 = st.columns([1, 6, 1])
         with c2:
-            # Ícone de Hospital no Login
             st.markdown("<div style='text-align: center; font-size: 80px;'>🏥</div>", unsafe_allow_html=True)
             st.markdown("<h1 style='text-align: center;'>Enamed Oficial</h1>", unsafe_allow_html=True)
             st.caption("<div style='text-align: center;'>Cronograma 2026 • 42 Semanas</div>", unsafe_allow_html=True)
@@ -224,7 +232,6 @@ current_user = st.session_state["logged_user"]
 
 # --- SIDEBAR ---
 with st.sidebar:
-    # Ícone de Hospital na Sidebar
     st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
     st.markdown(f"### Olá, **{current_user}**! 👋")
     if st.button("Sair"):
@@ -240,23 +247,17 @@ with st.sidebar:
 
 st.title("🏥 Desafio Enamed")
 
-tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
+# --- ABAS ---
+tab1, tab2, tab3, tab4 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin", "🔰 Tutorial"])
 
-# --- ABA 1: LIÇÕES (FEED INFINITO COM EXPANDERS) ---
+# --- ABA 1: LIÇÕES ---
 with tab1:
     st.markdown("### 📅 Cronograma Completo")
-    
-    # Lista única de semanas na ordem do CSV
     semanas = df["Semana"].unique()
-    
-    # Loop para exibir TODAS as semanas
     for sem in semanas:
         df_view = df[df["Semana"] == sem]
-        
-        # Determina se o expander deve começar aberto (apenas a primeira semana)
         start_open = (sem == semanas[0]) 
         
-        # Cria um Expander para a semana
         with st.expander(f"📍 {sem}", expanded=start_open):
             for index, row in df_view.iterrows():
                 real_idx = df[df["ID"] == row["ID"]].index[0]
@@ -275,7 +276,6 @@ with tab1:
                     d_alvo = date.today(); d_br = "--/--"; d_sem = "---"
                 
                 bg_tema, border_tema = "#ffffff", "#e5e5e5"
-                
                 if status:
                     b_data, bg_data, t_data, lbl, ico, border_tema = "#58cc02", "#e6fffa", "#58cc02", "FEITO", "✅", "#58cc02"
                 elif hoje > d_alvo:
@@ -307,9 +307,7 @@ with tab1:
                         current_link = row['Link_Questões']
                         if current_link:
                             st.markdown(f"🔗 **Link:** [{current_link}]({current_link})")
-                        else:
-                            st.info("Nenhum material ainda.")
-
+                        else: st.info("Nenhum material ainda.")
                         new_link = st.text_input("Colar Link:", key=f"l_{row['ID']}")
                         if st.button("💾 Salvar", key=f"s_{row['ID']}"):
                             if new_link:
@@ -340,9 +338,7 @@ with tab2:
                 p = calculate_xp(r["Data_Alvo"], r[f"{u}_Date"])
                 if p > 0: pts += p; tasks += 1
         placar.append({"Médico": u, "XP": pts, "Tarefas": tasks})
-        
     df_p = pd.DataFrame(placar).sort_values("XP", ascending=False).reset_index(drop=True)
-    
     for i, row in df_p.iterrows():
         med, bg = ["🥇", "🥈", "🥉", ""][i] if i < 4 else "", "#fff5c2" if i == 0 else "#f9f9f9"
         st.markdown(f"""
@@ -365,10 +361,86 @@ with tab3:
             for u in ALL_USERS: nrow[f"{u}_Status"], nrow[f"{u}_Date"] = False, None
             df = pd.concat([df, pd.DataFrame([nrow])], ignore_index=True)
             save_data(df); st.success("Ok!"); st.rerun()
-
     st.divider()
     if st.button("🗑️ ZERAR BANCO DE DADOS (Carregar Cronograma)", type="primary"):
         if os.path.exists(CSV_FILE):
             os.remove(CSV_FILE)
             for k in list(st.session_state.keys()): del st.session_state[k]
-            st.warning("Banco reiniciado para o Cronograma Oficial! Atualize a página."); st.rerun()
+            st.warning("Banco reiniciado! Atualize a página."); st.rerun()
+
+# --- ABA 4: TUTORIAL ---
+with tab4:
+    st.markdown("## 📚 Como Funciona o Desafio Enamed")
+    
+    st.markdown("""
+    Bem-vindo(a) ao seu companheiro de estudos! Este aplicativo foi desenhado para manter sua **consistência** e **organização** ao longo das 42 semanas de preparação.
+    """)
+    
+    st.info("💡 **Dica de Ouro:** O segredo não é estudar 12h por dia, mas estudar um pouco TODOS os dias sem falhar.")
+    
+    st.divider()
+    
+    st.markdown("### 1️⃣ Entendendo a Interface")
+    
+    col_tut1, col_tut2 = st.columns(2)
+    
+    with col_tut1:
+        st.markdown("#### 🎨 Cores e Status")
+        st.markdown("""
+        Cada tarefa muda de cor dependendo do seu progresso e da data:
+        
+        * ⬜ **Cinza (PRAZO):** Tarefa disponível, ainda dentro do prazo.
+        * 🟨 **Amarelo (ATRASADO):** A data alvo já passou e você ainda não concluiu.
+        * 🟩 **Verde (FEITO):** Tarefa concluída com sucesso!
+        """)
+        
+    with col_tut2:
+        st.markdown("#### 💎 Pontuação (XP)")
+        st.markdown("""
+        A gamificação serve para te motivar a não atrasar!
+        
+        * **100 XP:** Se você concluir a tarefa **antes ou no dia** do prazo.
+        * **50 XP:** Se você concluir a tarefa **depois** do prazo (Entregar atrasado).
+        * **0 XP:** Se não fizer.
+        """)
+        
+    st.divider()
+
+    st.markdown("### 2️⃣ Como Estudar (Passo a Passo)")
+    
+    st.markdown("""
+    **Passo 1: Abra a Semana Atual**
+    Na aba "Lições", clique na semana correspondente (ex: `📍 Semana 01`). Ela vai expandir e mostrar o tema.
+    
+    **Passo 2: Foco nas "Tarefas Chave"**
+    No cartão da lição, você verá o "Foco Principal" e um descritivo menor. Aquele descritivo contém as **3 missões da semana** (ex: "Ler sobre vacinas", "Fazer 10 questões", etc).
+    
+    **Passo 3: Marque como Concluído**
+    Assim que terminar de estudar aquele tópico, clique no botão **"Concluir"** (ou "Entregar"). O sistema salva automaticamente e te dá os pontos.
+    
+    **Passo 4: Contribua (Opcional)**
+    Achou um resumo legal no Drive? Um vídeo bom no YouTube? Clique em **"📂 Conteúdo Extra"** e cole o link para ajudar seus colegas.
+    """)
+    
+    st.divider()
+    
+    st.markdown("### 3️⃣ Exemplo Visual")
+    st.write("Abaixo está um exemplo de como uma tarefa aparece para você:")
+    
+    # Exemplo visual estático (HTML puro para demonstração)
+    st.markdown("""
+    <div style="display: flex; gap: 15px; align-items: stretch; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif; opacity: 0.8;">
+        <div style="flex: 0 0 100px; background-color: #f7f7f7; border: 2px solid #e5e5e5; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; color: #afafaf;">
+            <div style="font-size: 10px; font-weight: bold;">PRAZO</div>
+            <div style="font-size: 24px;">📅</div>
+            <div style="font-size: 12px; font-weight: bold;">Sex</div>
+            <div style="font-size: 14px; font-weight: bold;">20/02</div>
+        </div>
+        <div style="flex: 1; background-color: #ffffff; border: 2px solid #e5e5e5; border-radius: 12px; padding: 15px;">
+            <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; margin-bottom: 5px;">Preventiva & Pediatria</div>
+            <div style="font-size: 13px; color: #888;">1. Imunizações | 2. Vigilância em Saúde | 3. Revisão</div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.caption("☝️ Este é apenas um exemplo ilustrativo.")
