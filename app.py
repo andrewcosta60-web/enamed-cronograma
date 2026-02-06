@@ -6,24 +6,13 @@ import os
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Game", page_icon="🦉", layout="centered")
 
-# --- CSS (ESTÉTICA) ---
+# --- CSS (ESTILO DUOLINGO / CLEAN) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
     
     html, body, [class*="css"] {
         font-family: 'Varela Round', sans-serif;
-    }
-    
-    /* Card da Tarefa */
-    .task-card {
-        background-color: #ffffff;
-        border: 2px solid #e5e5e5;
-        border-radius: 16px;
-        padding: 0px; 
-        margin-bottom: 15px;
-        box-shadow: 0 4px 0 #e5e5e5;
-        overflow: hidden; 
     }
     
     /* Botões */
@@ -108,7 +97,7 @@ with st.sidebar:
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
 # ==========================================================
-# ABA 1: LIÇÕES (VISUAL CORRIGIDO)
+# ABA 1: LIÇÕES (LAYOUT "DUAS CAIXAS COLADAS")
 # ==========================================================
 with tab1:
     semanas = df["Semana"].unique()
@@ -121,94 +110,77 @@ with tab1:
         data_gravada = row[f"{current_user}_Date"]
         pontos_garantidos = calculate_xp(row["Data_Alvo"], data_gravada)
         
-        # Cores e Estilos
+        # Cores e Lógica de Status
         hoje = date.today()
         data_alvo_dt = datetime.strptime(row["Data_Alvo"], "%Y-%m-%d").date()
         
         if status:
-            cor_fundo_card = "#f7fff7"
+            # FEITO: Borda Verde, Caixa Data Verde
             cor_borda = "#58cc02"
-            cor_box_data = "transparent"
+            bg_data = "#e6fffa" # Verde bem clarinho
             cor_texto_data = "#58cc02"
             label_data = "FEITO"
             icone_data = "✅"
         elif hoje > data_alvo_dt:
-            cor_fundo_card = "#ffffff"
-            cor_borda = "#e5e5e5"
-            cor_box_data = "#fff3cd"
-            cor_texto_data = "#856404"
+            # ATRASADO: Borda Amarela, Caixa Data Amarela
+            cor_borda = "#ffc800"
+            bg_data = "#fff5d1" # Amarelo clarinho
+            cor_texto_data = "#d4a000"
             label_data = "ATRASADO"
             icone_data = "⚠️"
         else:
-            cor_fundo_card = "#ffffff"
+            # PRAZO: Borda Cinza, Caixa Data Cinza
             cor_borda = "#e5e5e5"
-            cor_box_data = "#f8f9fa"
-            cor_texto_data = "#888888"
+            bg_data = "#f7f7f7"
+            cor_texto_data = "#afafaf"
             label_data = "PRAZO"
             icone_data = "📅"
 
-        # HTML DO CARD (AGORA COM FONTE FORÇADA VARELA ROUND)
+        # --- HTML BLINDADO (DUAS CAIXAS) ---
         st.markdown(f"""
-        <div style="
-            background-color: {cor_fundo_card}; 
-            border: 2px solid {cor_borda}; 
-            border-radius: 16px; 
-            margin-bottom: 10px; 
-            box-shadow: 0 4px 0 #e5e5e5;
-            display: flex;
-            align-items: stretch;
-            min-height: 80px;
-            font-family: 'Varela Round', sans-serif !important; /* FORÇANDO A FONTE AQUI */
-        ">
+        <div style="display: flex; align-items: stretch; margin-bottom: 12px; font-family: 'Varela Round', sans-serif;">
+            
             <div style="
-                width: 100px;
-                min-width: 100px;
-                background-color: {cor_box_data}; 
-                color: {cor_texto_data};
+                width: 90px;
+                min-width: 90px;
+                background-color: {bg_data};
+                border: 2px solid {cor_borda};
+                border-right: none; /* Cola na outra caixa */
+                border-top-left-radius: 16px;
+                border-bottom-left-radius: 16px;
                 display: flex;
                 flex-direction: column;
-                justify-content: center;
                 align-items: center;
+                justify-content: center;
                 text-align: center;
-                border-right: 1px solid #eee;
                 padding: 5px;
-                font-family: 'Varela Round', sans-serif !important;
+                color: {cor_texto_data};
             ">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px; letter-spacing: 1px;">{label_data}</div>
-                <div style="font-size: 20px;">{icone_data}</div>
-                <div style="font-size: 14px; font-weight: bold; margin-top: 2px;">{row['Data_Alvo'][5:]}</div>
+                <div style="font-size: 10px; font-weight: bold; letter-spacing: 1px;">{label_data}</div>
+                <div style="font-size: 18px; margin: 2px 0;">{icone_data}</div>
+                <div style="font-size: 14px; font-weight: bold;">{row['Data_Alvo'][5:]}</div>
             </div>
 
             <div style="
-                flex: 1; 
-                min-width: 0; 
-                padding: 15px; 
-                display: flex; 
-                flex-direction: column; 
+                flex-grow: 1;
+                background-color: white;
+                border: 2px solid {cor_borda};
+                border-left: 1px solid #eee; /* Divisória sutil */
+                border-top-right-radius: 16px;
+                border-bottom-right-radius: 16px;
+                padding: 15px;
+                display: flex;
+                flex-direction: column;
                 justify-content: center;
-                font-family: 'Varela Round', sans-serif !important;
             ">
-                <div style="
-                    font-size: 18px; 
-                    font-weight: bold; 
-                    color: #4b4b4b; 
-                    line-height: 1.2; 
-                    margin-bottom: 5px;
-                    word-wrap: break-word;
-                    font-family: 'Varela Round', sans-serif !important; /* GARANTINDO O ESTILO */
-                ">
+                <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.3;">
                     {row['Tema']}
                 </div>
-                <div style="
-                    font-size: 13px; 
-                    color: #777; 
-                    line-height: 1.4;
-                    word-wrap: break-word;
-                    font-family: 'Varela Round', sans-serif !important;
-                ">
+                <div style="font-size: 13px; color: #777; margin-top: 5px; line-height: 1.4;">
                     {row['Detalhes']}
                 </div>
             </div>
+
         </div>
         """, unsafe_allow_html=True)
 
@@ -234,7 +206,7 @@ with tab1:
                     if st.button("✅ Concluir", key=f"chk2_{row['ID']}"):
                         df.at[real_idx, f"{current_user}_Status"] = True
                         save_data(df); st.rerun()
-                    st.markdown(f"<div style='text-align:center; font-size:11px; color:#999; font-family:Varela Round;'>↺ XP: {pontos_garantidos}</div>", unsafe_allow_html=True)
+                    st.markdown(f"<div style='text-align:center; font-size:11px; color:#999;'>↺ XP: {pontos_garantidos}</div>", unsafe_allow_html=True)
                 else:
                     hoje_str = str(date.today())
                     atrasado = hoje > data_alvo_dt
