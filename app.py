@@ -40,7 +40,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
-CSV_FILE = "enamed_cronograma_final.csv" # Nome novo para garantir atualização
+CSV_FILE = "enamed_cronograma_final.csv"
 DEFAULT_USERS = [] 
 
 # Avatares
@@ -122,7 +122,6 @@ def init_db():
         
         initial_data = []
         for i, row_data in enumerate(reader):
-            # Converte data DD/MM/YYYY para YYYY-MM-DD
             try:
                 date_str = row_data['Data_Fim']
                 dt_obj = datetime.strptime(date_str, "%d/%m/%Y").date()
@@ -241,82 +240,93 @@ st.title("🦉 Desafio Enamed")
 
 tab1, tab2, tab3 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin"])
 
-# --- ABA 1: LIÇÕES ---
+# --- ABA 1: LIÇÕES (FEED INFINITO COM EXPANDERS) ---
 with tab1:
+    st.markdown("### 📅 Cronograma Completo")
+    
+    # Lista única de semanas na ordem do CSV
     semanas = df["Semana"].unique()
-    sem = st.selectbox("Módulo:", semanas)
-    df_view = df[df["Semana"] == sem]
-
-    for index, row in df_view.iterrows():
-        real_idx = df[df["ID"] == row["ID"]].index[0]
-        if f"{current_user}_Status" not in df.columns: st.rerun()
-
-        status = row[f"{current_user}_Status"]
-        data_gravada = row[f"{current_user}_Date"]
-        pontos = calculate_xp(row["Data_Alvo"], data_gravada)
+    
+    # Loop para exibir TODAS as semanas
+    for sem in semanas:
+        df_view = df[df["Semana"] == sem]
         
-        hoje = date.today()
-        try: 
-            d_alvo = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
-            d_br = d_alvo.strftime("%d/%m")
-            d_sem = DIAS_PT[d_alvo.weekday()]
-        except: 
-            d_alvo = date.today(); d_br = "--/--"; d_sem = "---"
+        # Determina se o expander deve começar aberto (opcional: apenas a semana atual ou a primeira)
+        # Aqui, vamos deixar todos fechados para limpeza visual, ou o primeiro aberto.
+        start_open = (sem == semanas[0]) 
         
-        bg_tema, border_tema = "#ffffff", "#e5e5e5"
-        
-        if status:
-            b_data, bg_data, t_data, lbl, ico, border_tema = "#58cc02", "#e6fffa", "#58cc02", "FEITO", "✅", "#58cc02"
-        elif hoje > d_alvo:
-            b_data, bg_data, t_data, lbl, ico, border_tema = "#ffc800", "#fff5d1", "#d4a000", "ATRASADO", "⚠️", "#ffc800"
-        else:
-            b_data, bg_data, t_data, lbl, ico = "#e5e5e5", "#f7f7f7", "#afafaf", "PRAZO", "📅"
+        # Cria um Expander para a semana
+        with st.expander(f"📍 {sem}", expanded=start_open):
+            for index, row in df_view.iterrows():
+                real_idx = df[df["ID"] == row["ID"]].index[0]
+                if f"{current_user}_Status" not in df.columns: st.rerun()
 
-        tema_esc = html.escape(str(row['Tema']))
-        det_esc = html.escape(str(row['Detalhes']))
-
-        st.markdown(f"""
-        <div style="display: flex; gap: 15px; align-items: stretch; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
-            <div style="flex: 0 0 100px; background-color: {bg_data}; border: 2px solid {b_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; color: {t_data}; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
-                <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px;">{lbl}</div>
-                <div style="font-size: 24px; margin-bottom: 2px;">{ico}</div>
-                <div style="font-size: 12px; font-weight: bold;">{d_sem}</div>
-                <div style="font-size: 14px; font-weight: bold;">{d_br}</div>
-            </div>
-            <div style="flex: 1; background-color: {bg_tema}; border: 2px solid {border_tema}; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
-                <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.2; margin-bottom: 5px;">{tema_esc}</div>
-                <div style="font-size: 13px; color: #888; line-height: 1.4;">{det_esc}</div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        c1, c2 = st.columns([3, 1])
-        with c1:
-            with st.expander("📂 Conteúdo Extra / Contribuir ➕"):
-                current_link = row['Link_Questões']
-                if current_link:
-                    st.markdown(f"🔗 **Link:** [{current_link}]({current_link})")
+                status = row[f"{current_user}_Status"]
+                data_gravada = row[f"{current_user}_Date"]
+                pontos = calculate_xp(row["Data_Alvo"], data_gravada)
+                
+                hoje = date.today()
+                try: 
+                    d_alvo = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date()
+                    d_br = d_alvo.strftime("%d/%m")
+                    d_sem = DIAS_PT[d_alvo.weekday()]
+                except: 
+                    d_alvo = date.today(); d_br = "--/--"; d_sem = "---"
+                
+                bg_tema, border_tema = "#ffffff", "#e5e5e5"
+                
+                if status:
+                    b_data, bg_data, t_data, lbl, ico, border_tema = "#58cc02", "#e6fffa", "#58cc02", "FEITO", "✅", "#58cc02"
+                elif hoje > d_alvo:
+                    b_data, bg_data, t_data, lbl, ico, border_tema = "#ffc800", "#fff5d1", "#d4a000", "ATRASADO", "⚠️", "#ffc800"
                 else:
-                    st.info("Nenhum material ainda.")
+                    b_data, bg_data, t_data, lbl, ico = "#e5e5e5", "#f7f7f7", "#afafaf", "PRAZO", "📅"
 
-                new_link = st.text_input("Colar Link:", key=f"l_{row['ID']}")
-                if st.button("💾 Salvar", key=f"s_{row['ID']}"):
-                    if new_link:
-                        df.at[real_idx, "Link_Questões"] = new_link
-                        save_data(df); st.success("Atualizado!"); st.rerun()
-        with c2:
-            if status:
-                st.success(f"✅ FEITO! (+{pontos})")
-                if st.button("Refazer", key=f"r_{row['ID']}"):
-                    df.at[real_idx, f"{current_user}_Status"] = False; save_data(df); st.rerun()
-            else:
-                l_btn = "Entregar" if hoje > d_alvo else "Concluir"
-                t_btn = "secondary" if hoje > d_alvo else "primary"
-                if st.button(l_btn, key=f"c_{row['ID']}", type=t_btn):
-                    df.at[real_idx, f"{current_user}_Status"] = True
-                    df.at[real_idx, f"{current_user}_Date"] = str(date.today())
-                    save_data(df); st.balloons(); st.rerun()
-        st.write("")
+                tema_esc = html.escape(str(row['Tema']))
+                det_esc = html.escape(str(row['Detalhes']))
+
+                st.markdown(f"""
+                <div style="display: flex; gap: 15px; align-items: stretch; width: 100%; margin-bottom: 15px; font-family: 'Varela Round', sans-serif;">
+                    <div style="flex: 0 0 100px; background-color: {bg_data}; border: 2px solid {b_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 10px; color: {t_data}; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
+                        <div style="font-size: 10px; font-weight: bold; margin-bottom: 2px;">{lbl}</div>
+                        <div style="font-size: 24px; margin-bottom: 2px;">{ico}</div>
+                        <div style="font-size: 12px; font-weight: bold;">{d_sem}</div>
+                        <div style="font-size: 14px; font-weight: bold;">{d_br}</div>
+                    </div>
+                    <div style="flex: 1; background-color: {bg_tema}; border: 2px solid {border_tema}; border-radius: 12px; padding: 15px; display: flex; flex-direction: column; justify-content: center; box-shadow: 0 4px 0 rgba(0,0,0,0.05);">
+                        <div style="font-size: 17px; font-weight: bold; color: #4b4b4b; line-height: 1.2; margin-bottom: 5px;">{tema_esc}</div>
+                        <div style="font-size: 13px; color: #888; line-height: 1.4;">{det_esc}</div>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
+
+                c1, c2 = st.columns([3, 1])
+                with c1:
+                    with st.expander("📂 Conteúdo Extra / Contribuir ➕"):
+                        current_link = row['Link_Questões']
+                        if current_link:
+                            st.markdown(f"🔗 **Link:** [{current_link}]({current_link})")
+                        else:
+                            st.info("Nenhum material ainda.")
+
+                        new_link = st.text_input("Colar Link:", key=f"l_{row['ID']}")
+                        if st.button("💾 Salvar", key=f"s_{row['ID']}"):
+                            if new_link:
+                                df.at[real_idx, "Link_Questões"] = new_link
+                                save_data(df); st.success("Atualizado!"); st.rerun()
+                with c2:
+                    if status:
+                        st.success(f"✅ FEITO! (+{pontos})")
+                        if st.button("Refazer", key=f"r_{row['ID']}"):
+                            df.at[real_idx, f"{current_user}_Status"] = False; save_data(df); st.rerun()
+                    else:
+                        l_btn = "Entregar" if hoje > d_alvo else "Concluir"
+                        t_btn = "secondary" if hoje > d_alvo else "primary"
+                        if st.button(l_btn, key=f"c_{row['ID']}", type=t_btn):
+                            df.at[real_idx, f"{current_user}_Status"] = True
+                            df.at[real_idx, f"{current_user}_Date"] = str(date.today())
+                            save_data(df); st.balloons(); st.rerun()
+                st.write("")
 
 # --- ABA 2: PLACAR ---
 with tab2:
