@@ -109,8 +109,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
-CSV_FILE = "enamed_daily_db.csv"
-LINK_FILE = "drive_link.txt" # Arquivo para salvar o link do drive
+CSV_FILE = "enamed_db_v2.csv" # Mudei o nome para atualizar a estrutura com descrição
+LINK_FILE = "drive_link.txt" 
 DEFAULT_USERS = [] 
 
 # Avatares
@@ -388,7 +388,7 @@ def get_users_from_df(df):
 
 def init_db():
     if not os.path.exists(CSV_FILE):
-        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Link_Questões"]
+        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Link_Questões", "Link_Descricao"]
         for user in DEFAULT_USERS:
             cols.extend([f"{user}_Status", f"{user}_Date"])
             
@@ -415,7 +415,8 @@ def init_db():
                 row_data['Disciplina'],
                 row_data['Tema'],
                 row_data['Meta_Diaria'],
-                ""
+                "", # Link Vazio
+                ""  # Descrição Vazia
             ]
             for _ in DEFAULT_USERS: row.extend([False, None])
             initial_data.append(row)
@@ -432,7 +433,7 @@ def load_data():
 def save_data(df):
     df.to_csv(CSV_FILE, index=False)
 
-# FUNÇÕES PARA SALVAR O LINK DO DRIVE (PERSISTÊNCIA SIMPLES)
+# FUNÇÕES PERSISTÊNCIA LINK DO DRIVE
 def get_saved_link():
     if os.path.exists(LINK_FILE):
         with open(LINK_FILE, "r") as f:
@@ -529,7 +530,7 @@ with st.sidebar:
         if f"{current_user}_Date" in df.columns:
             total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
     
-    # Caixa XP Personalizada
+    # Caixa XP
     st.markdown(f"""
     <div class="xp-box">
         <div style="font-size: 14px; color: #aaa;">💎 XP Total</div>
@@ -537,11 +538,10 @@ with st.sidebar:
     </div>
     """, unsafe_allow_html=True)
 
-# --- LAYOUT DO TOPO (TÍTULO + DASHBOARD) ---
+# --- LAYOUT DO TOPO (DASHBOARD) ---
 today = date.today()
 df['dt_obj'] = pd.to_datetime(df['Data_Alvo']).dt.date
 
-# 1. Identificar Semana
 future_tasks = df[df['dt_obj'] >= today]
 if df['dt_obj'].min() > today:
     status_cronograma = "Pré-Edital"
@@ -551,14 +551,12 @@ else:
     prox_semana = future_tasks.iloc[0]['Semana']
     status_cronograma = f"Semana {prox_semana:02d}"
 
-# 2. Calcular Progresso
 total_tasks = len(df)
 tasks_done = 0
 if f"{current_user}_Status" in df.columns:
     tasks_done = df[f"{current_user}_Status"].sum()
 pct_completo = (tasks_done / total_tasks) * 100 if total_tasks > 0 else 0
 
-# 3. Renderizar
 c_title, c_dash = st.columns([1.5, 2.5])
 
 with c_title:
@@ -624,161 +622,4 @@ with tab1:
                 else:
                     b_data, bg_data, t_data, lbl, ico = "#e5e5e5", "#f7f7f7", "#afafaf", "PRAZO", "📅"
 
-                disc_esc = html.escape(str(row['Disciplina']))
-                tema_esc = html.escape(str(row['Tema']))
-                meta_esc = html.escape(str(row['Meta']))
-
-                st.markdown(f"""
-                <div style="display: flex; gap: 10px; align-items: stretch; width: 100%; margin-bottom: 10px; font-family: 'Varela Round', sans-serif;">
-                    <div style="flex: 0 0 80px; background-color: {bg_data}; border: 2px solid {b_data}; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 5px; color: {t_data};">
-                        <div style="font-size: 9px; font-weight: bold;">{lbl}</div>
-                        <div style="font-size: 18px;">{ico}</div>
-                        <div style="font-size: 11px; font-weight: bold;">{row['Dia_Semana']}</div>
-                        <div style="font-size: 12px; font-weight: bold;">{d_br}</div>
-                    </div>
-                    <div style="flex: 1; background-color: {bg_tema}; border: 2px solid {border_tema}; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; justify-content: center;">
-                        <div style="font-size: 11px; color: #888; text-transform: uppercase; font-weight: bold;">{disc_esc}</div>
-                        <div style="font-size: 15px; font-weight: bold; color: #4b4b4b; line-height: 1.2; margin-bottom: 3px;">{tema_esc}</div>
-                        <div style="font-size: 12px; color: #666;">🎯 {meta_esc}</div>
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-
-                c1, c2 = st.columns([4, 1])
-                with c1:
-                    with st.expander("🔗 Adicionar Link"):
-                        cur_link = row['Link_Questões']
-                        if cur_link: st.markdown(f"**Link:** [{cur_link}]({cur_link})")
-                        nl = st.text_input("Novo Link:", key=f"l_{row['ID']}")
-                        if st.button("Salvar", key=f"s_{row['ID']}"):
-                            df.at[real_idx, "Link_Questões"] = nl
-                            save_data(df); st.success("Salvo!"); st.rerun()
-                with c2:
-                    if status:
-                        if st.button("Desfazer", key=f"r_{row['ID']}"):
-                            df.at[real_idx, f"{current_user}_Status"] = False; save_data(df); st.rerun()
-                    else:
-                        lbl_btn = "Entregar" if hoje > d_alvo else "Concluir"
-                        t_btn = "secondary" if hoje > d_alvo else "primary"
-                        if st.button(lbl_btn, key=f"c_{row['ID']}", type=t_btn):
-                            df.at[real_idx, f"{current_user}_Status"] = True
-                            df.at[real_idx, f"{current_user}_Date"] = str(date.today())
-                            save_data(df); st.rerun()
-                st.divider()
-
-# --- ABA 2: PLACAR ---
-with tab2:
-    st.subheader("🏆 Classificação Geral")
-    placar = []
-    for u in ALL_USERS:
-        pts, tasks = 0, 0
-        for i, r in df.iterrows():
-            if f"{u}_Date" in df.columns:
-                p = calculate_xp(r["Data_Alvo"], r[f"{u}_Date"])
-                if p > 0: pts += p; tasks += 1
-        placar.append({"Médico": u, "XP": pts, "Tarefas": tasks})
-    df_p = pd.DataFrame(placar).sort_values("XP", ascending=False).reset_index(drop=True)
-    for i, row in df_p.iterrows():
-        med, bg = ["🥇", "🥈", "🥉", ""][i] if i < 4 else "", "#fff5c2" if i == 0 else "#f9f9f9"
-        st.markdown(f"""
-        <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; font-family: 'Varela Round', sans-serif; color: black;">
-            <div><span style="font-size:20px;">{med}</span> <b>{row['Médico']}</b></div>
-            <div style="text-align:right;"><b>{row['XP']} XP</b><br><small>{row['Tarefas']} lições</small></div>
-        </div>
-        """, unsafe_allow_html=True)
-
-# --- ABA 3: MATERIAL (NOVA ABA) ---
-with tab3:
-    st.markdown("## 📂 Repositório de Aulas")
-    st.markdown("""
-    Acesse abaixo o Google Drive contendo os PDFs, Vídeos e Resumos do Estratégia MED (ou seu material de preferência).
-    """)
-    
-    # Recuperar link salvo
-    current_drive_link = get_saved_link()
-    
-    if current_drive_link:
-        st.success("✅ Link do Drive configurado com sucesso!")
-        st.link_button("🚀 ACESSAR DRIVE DE ESTUDOS", current_drive_link, type="primary", use_container_width=True)
-    else:
-        st.warning("⚠️ Nenhum link configurado. Use a opção abaixo para adicionar.")
-    
-    st.divider()
-    
-    with st.expander("⚙️ Configurar Link do Drive"):
-        st.info("Cole aqui o link da pasta do Google Drive onde estão os materiais.")
-        new_link_input = st.text_input("Novo Link:", value=current_drive_link)
-        
-        if st.button("Salvar Link do Drive"):
-            if new_link_input:
-                save_drive_link_file(new_link_input)
-                st.success("Link salvo! A página será recarregada.")
-                st.rerun()
-            else:
-                st.error("Por favor, insira um link válido.")
-
-# --- ABA 4: ADMIN ---
-with tab3: # Note: This logic is tricky with index reuse, keeping separate tab variables is better.
-    # Re-using variable name logic, actually Tab 4 is Admin in list.
-    pass 
-
-with tab4:
-    st.header("⚙️ Administração")
-    if "admin_unlocked" not in st.session_state: st.session_state["admin_unlocked"] = False
-    if not st.session_state["admin_unlocked"]:
-        senha = st.text_input("Senha:", type="password")
-        if senha == "UNIARP":
-            st.session_state["admin_unlocked"] = True; st.rerun()
-        elif senha: st.error("Senha incorreta!")
-    
-    if st.session_state["admin_unlocked"]:
-        st.success("🔓 Liberado")
-        if st.button("🗑️ RESETAR TUDO", type="primary"):
-            if os.path.exists(CSV_FILE):
-                os.remove(CSV_FILE)
-                for k in list(st.session_state.keys()): del st.session_state[k]
-                st.rerun()
-        if st.button("🔒 Sair"):
-            st.session_state["admin_unlocked"] = False; st.rerun()
-
-# --- ABA 5: TUTORIAL ---
-with tab5:
-    st.markdown("## 📚 Manual do Usuário Enamed")
-    
-    st.markdown("""
-    <div class="warning-box">
-    <strong>⚠️ PRÉ-REQUISITO OBRIGATÓRIO</strong><br>
-    Este aplicativo é um <strong>GUIA DE ESTUDOS</strong> e <strong>TRACKER DE METAS</strong>. Ele não contém as aulas em si.<br><br>
-    Para estudar, você deve ter acesso ao <strong>Drive do Estratégia MED</strong> (ou seu material de preferência) contendo os PDFs e Vídeos das aulas citadas no cronograma.
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.divider()
-
-    st.markdown("### 🧠 Metodologia de Estudo")
-    st.markdown("""
-    Nossa abordagem é baseada em **Engenharia Reversa** e **Estudo Ativo**. Esqueça assistir 4 horas de aula passivamente!
-    
-    1.  **⚡ Sprint Teórico (20% do tempo):** Leia o resumo ou mapa mental do tema do dia no Drive. Entenda o básico.
-    2.  **📝 Questões (80% do tempo):** Vá para o banco de questões e faça a meta do dia (ex: 15 questões).
-    3.  **🔄 Engenharia Reversa:** O mais importante! Para cada questão que você errar (ou chutar), leia o comentário detalhado e entenda *por que* errou. Anote o conceito chave.
-    """)
-
-    st.divider()
-
-    st.markdown("### 📱 Fluxo de Uso do App")
-    st.markdown("""
-    1.  **Abra o App:** Faça login com seu Avatar.
-    2.  **Verifique a Meta:** Vá na aba "Lições", abra a Semana atual e veja a tarefa do dia (ex: *Pediatria - Imunizações*).
-    3.  **Estude:** Vá até o seu Drive/Material, encontre a aula correspondente e estude seguindo a metodologia acima.
-    4.  **Registre o Link (Opcional):** Se achar um resumo top ou o link direto da pasta, clique em *🔗 Adicionar Link* no app e cole lá para facilitar seu acesso futuro (e dos colegas).
-    5.  **Conclua:** Volte ao app e clique em **✅ Concluir**. Pronto! Seus 100 XP estão garantidos.
-    """)
-    
-    st.divider()
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.info("📅 **Prazo:** Tente cumprir a meta no dia correto para ganhar pontuação máxima (Verde).")
-    with col2:
-        st.warning("🐢 **Atrasos:** Se fizer depois do prazo, a tarefa fica Amarela e vale metade dos pontos.")
+                disc_esc = html.escape
