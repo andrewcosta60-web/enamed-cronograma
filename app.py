@@ -21,12 +21,8 @@ st.markdown("""
         font-family: 'Varela Round', sans-serif;
     }
     
-    /* === TRADUÇÃO FORÇADA DO UPLOAD DE ARQUIVO === */
-    /* Esconde o texto original em inglês */
-    [data-testid="stFileUploaderDropzoneInstructions"] > div > span {
-        display: none;
-    }
-    /* Insere o texto em português */
+    /* === TRADUÇÃO UPLOAD === */
+    [data-testid="stFileUploaderDropzoneInstructions"] > div > span { display: none; }
     [data-testid="stFileUploaderDropzoneInstructions"] > div::after {
         content: "Arraste sua foto aqui ou clique para buscar";
         font-size: 14px;
@@ -35,10 +31,7 @@ st.markdown("""
         display: block;
         margin-top: -10px;
     }
-    /* Esconde o limite de tamanho original */
-    [data-testid="stFileUploaderDropzoneInstructions"] > div > small {
-        display: none;
-    }
+    [data-testid="stFileUploaderDropzoneInstructions"] > div > small { display: none; }
     
     /* === BOTÕES === */
     button[kind="primary"] {
@@ -48,21 +41,16 @@ st.markdown("""
         border-radius: 12px !important;
         font-weight: bold !important;
     }
-    
     button[kind="secondary"] {
         border-radius: 12px !important;
         font-weight: bold !important;
     }
 
-    /* Input de Texto */
-    .stTextInput > div > div > input {
-        border-radius: 10px;
-    }
+    /* Input */
+    .stTextInput > div > div > input { border-radius: 10px; }
     
-    /* Barra de Progresso */
-    .stProgress > div > div > div > div {
-        background-color: #58cc02;
-    }
+    /* Progress Bar */
+    .stProgress > div > div > div > div { background-color: #58cc02; }
     
     /* === DASHBOARD === */
     .dash-card {
@@ -92,13 +80,26 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* Título */
-    .custom-title {
-        font-size: 40px;
-        font-weight: bold;
-        margin-bottom: 0px;
-        padding-bottom: 0px;
-        line-height: 1.2;
+    /* Foto de Perfil Redonda (Para Imagens) */
+    .profile-pic-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+    .profile-pic {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #58cc02;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    /* Emoji Grande (Para Avatares) */
+    .profile-emoji {
+        font-size: 80px;
+        text-align: center;
+        margin-bottom: 10px;
+        display: block;
     }
     
     /* XP Box */
@@ -116,7 +117,7 @@ st.markdown("""
         color: #58cc02;
     }
     
-    /* Lista de Links */
+    /* Links */
     .saved-link-item {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
@@ -127,13 +128,9 @@ st.markdown("""
         align-items: center;
         gap: 10px;
     }
-    .saved-link-item a {
-        text-decoration: none;
-        color: #0068c9;
-        font-weight: bold;
-    }
+    .saved-link-item a { text-decoration: none; color: #0068c9; font-weight: bold; }
     
-    /* Caixa de Confirmação */
+    /* Confirmação */
     .delete-confirm-box {
         background-color: #ffe6e6;
         border: 1px solid #ffcccc;
@@ -144,7 +141,7 @@ st.markdown("""
         text-align: center;
     }
     
-    /* Tutorial Boxes */
+    /* Tutorial */
     .info-box {
         background-color: #e3f2fd;
         border-left: 5px solid #2196f3;
@@ -161,6 +158,15 @@ st.markdown("""
         margin-bottom: 10px;
         color: black;
     }
+    
+    /* Título */
+    .custom-title {
+        font-size: 40px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        padding-bottom: 0px;
+        line-height: 1.2;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -170,10 +176,11 @@ LINK_FILE = "drive_link.txt"
 PROFILE_FILE = "profiles.json" 
 DEFAULT_USERS = [] 
 
-# Avatares
+# Avatares Disponíveis (Emojis)
 AVATARS = [
-    "👨‍⚕️", "👩‍⚕️", "🏥", "🧠", "🫀", "🧬", "🚑", "🩺", "💉", "💊", 
-    "🦠", "🩸", "🎓", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🚀", "💡", "🔥"
+    "👨‍⚕️", "👩‍⚕️", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🦄", "🐸", 
+    "🦉", "🐙", "🦋", "🍄", "🔥", "🚀", "💡", "🧠", "🫀", "💊", 
+    "💉", "🦠", "🧬", "🩺", "🚑", "🏥", "🐧", "🦈", "🦅", "🐺"
 ]
 
 # --- DADOS DO CRONOGRAMA ---
@@ -500,7 +507,7 @@ def save_drive_link_file(new_link):
     with open(LINK_FILE, "w") as f:
         f.write(new_link)
 
-# --- FUNÇÕES PARA PERFIL (FOTO) ---
+# --- FUNÇÕES PARA PERFIL (FOTO/EMOJI) ---
 def load_profiles():
     if os.path.exists(PROFILE_FILE):
         try:
@@ -569,11 +576,15 @@ if "logged_user" not in st.session_state:
                         user_input = st.selectbox("Selecione seu perfil:", ALL_USERS)
                     with col_pic:
                         if user_input and user_input in profiles:
-                            # Mostrar foto se existir
-                            st.markdown(f"""
-                            <img src="data:image/png;base64,{profiles[user_input]}" 
-                            style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #58cc02;">
-                            """, unsafe_allow_html=True)
+                            # Verifica se é Base64 (Imagem) ou Emoji (Texto Curto)
+                            profile_data = profiles[user_input]
+                            if len(profile_data) > 20: # É imagem
+                                st.markdown(f"""
+                                <img src="data:image/png;base64,{profile_data}" 
+                                style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #58cc02;">
+                                """, unsafe_allow_html=True)
+                            else: # É emoji
+                                st.markdown(f"<div style='font-size: 50px; text-align: center;'>{profile_data}</div>", unsafe_allow_html=True)
                     
                     if st.button("🚀 ENTRAR", type="primary"):
                         if user_input:
@@ -584,8 +595,14 @@ if "logged_user" not in st.session_state:
                 st.write("### Criar novo perfil")
                 nm = st.text_input("Seu Nome")
                 
-                # --- AQUI ESTÁ A ALTERAÇÃO ---
-                uploaded_file = st.file_uploader("Adicione sua foto aqui (Opcional)", type=['png', 'jpg', 'jpeg'])
+                st.write("Escolha seu avatar:")
+                # Opção 1: Emoji
+                avatar_choice = st.selectbox("Selecione um bichinho/ícone:", AVATARS)
+                
+                st.markdown("**OU**")
+                
+                # Opção 2: Foto
+                uploaded_file = st.file_uploader("Envie sua foto (Prioridade sobre o ícone)", type=['png', 'jpg', 'jpeg'])
                 
                 if st.button("Salvar e Entrar"):
                     if nm and len(nm) > 2:
@@ -593,16 +610,17 @@ if "logged_user" not in st.session_state:
                         df, success, msg = add_new_user(df, final_name)
                         
                         if success:
-                            # Processar Foto (Base64)
+                            # Prioridade: Foto > Emoji
                             if uploaded_file is not None:
                                 try:
                                     img = Image.open(uploaded_file)
-                                    # Resize para não ficar pesado (thumbnail)
                                     img.thumbnail((150, 150)) 
                                     b64_str = image_to_base64(img)
                                     save_profile(final_name, b64_str)
-                                except:
-                                    pass # Ignora erro de imagem
+                                except: pass
+                            else:
+                                # Salva o Emoji
+                                save_profile(final_name, avatar_choice)
                             
                             st.session_state["logged_user"] = final_name
                             st.rerun()
@@ -614,13 +632,17 @@ current_user = st.session_state["logged_user"]
 
 # --- SIDEBAR ---
 with st.sidebar:
-    # Exibir Foto de Perfil Grande
+    # Exibir Perfil (Foto ou Emoji)
     if current_user in profiles:
-        st.markdown(f"""
-        <div class="profile-pic-container">
-            <img class="profile-pic" src="data:image/png;base64,{profiles[current_user]}">
-        </div>
-        """, unsafe_allow_html=True)
+        profile_data = profiles[current_user]
+        if len(profile_data) > 20: # Imagem Base64
+            st.markdown(f"""
+            <div class="profile-pic-container">
+                <img class="profile-pic" src="data:image/png;base64,{profile_data}">
+            </div>
+            """, unsafe_allow_html=True)
+        else: # Emoji
+            st.markdown(f"<div class='profile-emoji'>{profile_data}</div>", unsafe_allow_html=True)
     else:
         st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
     
@@ -845,10 +867,14 @@ with tab2:
     for i, row in df_p.iterrows():
         med, bg = ["🥇", "🥈", "🥉", ""][i] if i < 4 else "", "#fff5c2" if i == 0 else "#f9f9f9"
         
-        # Foto no Placar
+        # Lógica de Exibição no Placar (Híbrido)
         img_html = ""
         if row['Médico'] in profiles:
-            img_html = f'<img src="data:image/png;base64,{profiles[row["Médico"]]}" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">'
+            profile_data = profiles[row['Médico']]
+            if len(profile_data) > 20: # É imagem
+                img_html = f'<img src="data:image/png;base64,{profile_data}" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">'
+            else: # É emoji
+                img_html = f'<span style="font-size:24px; margin-right: 10px;">{profile_data}</span>'
         else:
             img_html = '<span style="font-size:20px; margin-right: 10px;">👤</span>'
 
