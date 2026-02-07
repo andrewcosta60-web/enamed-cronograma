@@ -6,6 +6,8 @@ import html
 import io
 import csv
 import json
+import base64
+from PIL import Image
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="wide") 
@@ -19,7 +21,7 @@ st.markdown("""
         font-family: 'Varela Round', sans-serif;
     }
     
-    /* === BOTÕES === */
+    /* Botões */
     button[kind="primary"] {
         background-color: #58cc02 !important;
         border-color: #58cc02 !important;
@@ -27,23 +29,22 @@ st.markdown("""
         border-radius: 12px !important;
         font-weight: bold !important;
     }
-    
     button[kind="secondary"] {
         border-radius: 12px !important;
         font-weight: bold !important;
     }
 
-    /* Input de Texto */
+    /* Input */
     .stTextInput > div > div > input {
         border-radius: 10px;
     }
     
-    /* Barra de Progresso */
+    /* Progress Bar */
     .stProgress > div > div > div > div {
         background-color: #58cc02;
     }
     
-    /* === DASHBOARD === */
+    /* Dashboard */
     .dash-card {
         background-color: #f0f2f6 !important;
         border-radius: 8px;
@@ -71,13 +72,19 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* Título */
-    .custom-title {
-        font-size: 40px;
-        font-weight: bold;
-        margin-bottom: 0px;
-        padding-bottom: 0px;
-        line-height: 1.2;
+    /* Foto de Perfil Redonda */
+    .profile-pic-container {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+    .profile-pic {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #58cc02;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
     
     /* XP Box */
@@ -95,7 +102,7 @@ st.markdown("""
         color: #58cc02;
     }
     
-    /* Lista de Links */
+    /* Links */
     .saved-link-item {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
@@ -112,7 +119,7 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* Caixa de Confirmação */
+    /* Confirmação Delete */
     .delete-confirm-box {
         background-color: #ffe6e6;
         border: 1px solid #ffcccc;
@@ -123,7 +130,7 @@ st.markdown("""
         text-align: center;
     }
     
-    /* Tutorial Boxes */
+    /* Avisos */
     .info-box {
         background-color: #e3f2fd;
         border-left: 5px solid #2196f3;
@@ -140,19 +147,23 @@ st.markdown("""
         margin-bottom: 10px;
         color: black;
     }
+    
+    /* Título */
+    .custom-title {
+        font-size: 40px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        padding-bottom: 0px;
+        line-height: 1.2;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
 CSV_FILE = "enamed_db_v4.csv"
 LINK_FILE = "drive_link.txt" 
+PROFILE_FILE = "profiles.json" # Arquivo novo para guardar as fotos
 DEFAULT_USERS = [] 
-
-# Avatares
-AVATARS = [
-    "👨‍⚕️", "👩‍⚕️", "🏥", "🧠", "🫀", "🧬", "🚑", "🩺", "💉", "💊", 
-    "🦠", "🩸", "🎓", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🚀", "💡", "🔥"
-]
 
 # --- DADOS DO CRONOGRAMA ---
 RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
@@ -423,7 +434,7 @@ def get_users_from_df(df):
 
 def init_db():
     if not os.path.exists(CSV_FILE):
-        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Links_Content"]
+        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Link_Questões", "Links_Content"]
         for user in DEFAULT_USERS:
             cols.extend([f"{user}_Status", f"{user}_Date"])
             
@@ -450,7 +461,8 @@ def init_db():
                 row_data['Disciplina'],
                 row_data['Tema'],
                 row_data['Meta_Diaria'],
-                "[]" # Lista vazia em JSON
+                "", # Link Vazio (Legado)
+                "[]" # Lista vazia em JSON (Novo)
             ]
             for _ in DEFAULT_USERS: row.extend([False, None])
             initial_data.append(row)
@@ -478,6 +490,26 @@ def save_drive_link_file(new_link):
     with open(LINK_FILE, "w") as f:
         f.write(new_link)
 
+# --- FUNÇÕES PARA PERFIL (FOTO) ---
+def load_profiles():
+    if os.path.exists(PROFILE_FILE):
+        try:
+            with open(PROFILE_FILE, "r") as f:
+                return json.load(f)
+        except: return {}
+    return {}
+
+def save_profile(username, image_data):
+    profiles = load_profiles()
+    profiles[username] = image_data
+    with open(PROFILE_FILE, "w") as f:
+        json.dump(profiles, f)
+
+def image_to_base64(image):
+    buffered = io.BytesIO()
+    image.save(buffered, format="PNG")
+    return base64.b64encode(buffered.getvalue()).decode()
+
 def add_new_user(df, new_name):
     if f"{new_name}_Status" in df.columns:
         return df, False, "Esse nome já existe!"
@@ -499,6 +531,7 @@ def calculate_xp(target, completed_at):
 # --- INICIALIZAÇÃO ---
 df = load_data()
 ALL_USERS = get_users_from_df(df)
+profiles = load_profiles()
 
 # --- LOGIN ---
 if "logged_user" not in st.session_state:
@@ -521,7 +554,17 @@ if "logged_user" not in st.session_state:
                     st.info("Nenhum participante. Cadastre o primeiro na aba ao lado! 👉")
                 else:
                     st.write("### Quem é você?")
-                    user_input = st.selectbox("Selecione seu perfil:", ALL_USERS)
+                    col_sel, col_pic = st.columns([3, 1])
+                    with col_sel:
+                        user_input = st.selectbox("Selecione seu perfil:", ALL_USERS)
+                    with col_pic:
+                        if user_input and user_input in profiles:
+                            # Mostrar foto se existir
+                            st.markdown(f"""
+                            <img src="data:image/png;base64,{profiles[user_input]}" 
+                            style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid #58cc02;">
+                            """, unsafe_allow_html=True)
+                    
                     if st.button("🚀 ENTRAR", type="primary"):
                         if user_input:
                             st.session_state["logged_user"] = user_input
@@ -529,16 +572,26 @@ if "logged_user" not in st.session_state:
             
             with tab_register:
                 st.write("### Criar novo perfil")
-                ce, cn = st.columns([1, 3])
-                with ce: av = st.selectbox("Avatar", AVATARS)
-                with cn: nm = st.text_input("Seu Nome")
-                final_name = f"{av} {nm}" if nm else ""
-                if nm: st.caption(f"Será: **{final_name}**")
+                nm = st.text_input("Seu Nome")
+                uploaded_file = st.file_uploader("Sua Foto (Opcional)", type=['png', 'jpg', 'jpeg'])
                 
                 if st.button("Salvar e Entrar"):
                     if nm and len(nm) > 2:
+                        final_name = f"Dr(a). {nm}"
                         df, success, msg = add_new_user(df, final_name)
+                        
                         if success:
+                            # Processar Foto (Base64)
+                            if uploaded_file is not None:
+                                try:
+                                    img = Image.open(uploaded_file)
+                                    # Resize para não ficar pesado (thumbnail)
+                                    img.thumbnail((150, 150)) 
+                                    b64_str = image_to_base64(img)
+                                    save_profile(final_name, b64_str)
+                                except:
+                                    pass # Ignora erro de imagem
+                            
                             st.session_state["logged_user"] = final_name
                             st.rerun()
                         else: st.error(msg)
@@ -549,8 +602,18 @@ current_user = st.session_state["logged_user"]
 
 # --- SIDEBAR ---
 with st.sidebar:
-    st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
-    st.markdown(f"### Olá, **{current_user}**! 👋")
+    # Exibir Foto de Perfil Grande
+    if current_user in profiles:
+        st.markdown(f"""
+        <div class="profile-pic-container">
+            <img class="profile-pic" src="data:image/png;base64,{profiles[current_user]}">
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
+    
+    st.markdown(f"<h3 style='text-align: center;'>Olá, {current_user}! 👋</h3>", unsafe_allow_html=True)
+    
     if st.button("Sair"):
         del st.session_state["logged_user"]
         st.query_params.clear()
@@ -768,10 +831,21 @@ with tab2:
         placar.append({"Médico": u, "XP": pts, "Tarefas": tasks})
     df_p = pd.DataFrame(placar).sort_values("XP", ascending=False).reset_index(drop=True)
     for i, row in df_p.iterrows():
+        # Tenta pegar a foto
+        img_html = ""
+        if row['Médico'] in profiles:
+            img_html = f'<img src="data:image/png;base64,{profiles[row["Médico"]]}" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">'
+        else:
+            img_html = '<span style="font-size:20px; margin-right: 10px;">👤</span>'
+
         med, bg = ["🥇", "🥈", "🥉", ""][i] if i < 4 else "", "#fff5c2" if i == 0 else "#f9f9f9"
         st.markdown(f"""
-        <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; font-family: 'Varela Round', sans-serif; color: black;">
-            <div><span style="font-size:20px;">{med}</span> <b>{row['Médico']}</b></div>
+        <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; font-family: 'Varela Round', sans-serif; color: black; align-items: center;">
+            <div style="display: flex; align-items: center;">
+                <span style="font-size:20px; margin-right: 10px;">{med}</span> 
+                {img_html}
+                <b>{row['Médico']}</b>
+            </div>
             <div style="text-align:right;"><b>{row['XP']} XP</b><br><small>{row['Tarefas']} lições</small></div>
         </div>
         """, unsafe_allow_html=True)
@@ -835,6 +909,7 @@ with tab4:
         if st.button("🗑️ RESETAR TUDO", type="primary"):
             if os.path.exists(CSV_FILE):
                 os.remove(CSV_FILE)
+                if os.path.exists(PROFILE_FILE): os.remove(PROFILE_FILE) # Reseta perfis também
                 for k in list(st.session_state.keys()): del st.session_state[k]
                 st.rerun()
         if st.button("🔒 Sair"):
