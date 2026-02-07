@@ -5,7 +5,7 @@ import os
 import html
 import io
 import csv
-import json # Importante para salvar listas no CSV
+import json
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="wide") 
@@ -19,20 +19,37 @@ st.markdown("""
         font-family: 'Varela Round', sans-serif;
     }
     
-    /* Botões */
-    .stButton > button {
-        border-radius: 12px;
-        font-weight: bold;
-        border: none;
-        box-shadow: 0 4px 0 rgba(0,0,0,0.2);
-        transition: margin-top 0.1s, box-shadow 0.1s;
-        width: 100%;
+    /* === ESTILIZAÇÃO DOS BOTÕES (CORREÇÃO VERDE) === */
+    /* Botão Primário (Adicionar, Concluir, Salvar) -> VERDE */
+    button[kind="primary"] {
+        background-color: #58cc02 !important;
+        border-color: #58cc02 !important;
+        color: white !important;
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.1) !important;
+        transition: all 0.2s !important;
     }
-    .stButton > button:active {
-        margin-top: 4px;
-        box-shadow: none;
+    button[kind="primary"]:hover {
+        background-color: #45a002 !important;
+        border-color: #45a002 !important;
+        margin-top: 2px !important;
+        box-shadow: 0 2px 0 rgba(0,0,0,0.1) !important;
     }
-    
+    button[kind="primary"]:active {
+        margin-top: 4px !important;
+        box-shadow: none !important;
+    }
+
+    /* Botão Secundário (Entregar Atrasado, Desfazer) -> CINZA/PADRÃO */
+    button[kind="secondary"] {
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        border: 1px solid #e0e0e0 !important;
+        background-color: #ffffff !important;
+        color: #333 !important;
+    }
+
     /* Input de Texto */
     .stTextInput > div > div > input {
         border-radius: 10px;
@@ -43,29 +60,35 @@ st.markdown("""
         background-color: #58cc02;
     }
     
-    /* === DASHBOARD === */
+    /* === DASHBOARD (CORREÇÃO DE TEXTO PRETO) === */
     .dash-card {
-        background-color: #f0f2f6;
-        border-radius: 10px;
-        padding: 10px;
+        background-color: #f0f2f6 !important;
+        border-radius: 8px;
+        padding: 8px 15px;
         text-align: center;
         border: 1px solid #dcdcdc;
         height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
     }
     .dash-label {
-        font-size: 12px !important;
+        font-size: 11px !important;
         font-weight: bold !important;
-        color: #555555 !important;
-        margin-bottom: 2px;
+        color: #333333 !important;
+        margin-bottom: 0px;
         text-transform: uppercase;
+        line-height: 1;
     }
     .dash-value {
-        font-size: 18px !important;
-        font-weight: 800 !important;
+        font-size: 16px !important;
+        font-weight: 900 !important;
         color: #000000 !important;
+        margin-top: 2px;
+        line-height: 1.2;
     }
     
-    /* Título */
+    /* Título Personalizado */
     .custom-title {
         font-size: 40px;
         font-weight: bold;
@@ -74,7 +97,7 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* XP Box */
+    /* Caixa de XP Sidebar */
     .xp-box {
         background-color: #262730;
         border: 1px solid #444;
@@ -89,25 +112,32 @@ st.markdown("""
         color: #58cc02;
     }
     
-    /* Links salvos */
+    /* Lista de Links Salvos */
     .saved-link-item {
+        background-color: #ffffff;
+        border: 1px solid #e0e0e0;
+        padding: 10px;
+        border-radius: 10px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: background-color 0.2s;
+    }
+    .saved-link-item:hover {
         background-color: #f9f9f9;
-        border: 1px solid #eee;
-        padding: 8px;
-        border-radius: 8px;
-        margin-bottom: 5px;
-        color: black;
     }
     .saved-link-item a {
         text-decoration: none;
         color: #0068c9;
         font-weight: bold;
+        flex-grow: 1;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
-CSV_FILE = "enamed_db_v4.csv" # V4 para suportar listas JSON
+CSV_FILE = "enamed_db_v4.csv"
 LINK_FILE = "drive_link.txt" 
 DEFAULT_USERS = [] 
 
@@ -666,7 +696,8 @@ with tab1:
                         new_desc = st.text_input("Nome (ex: Vídeo Aula):", key=f"d_{row['ID']}")
                         new_url = st.text_input("URL:", key=f"u_{row['ID']}")
                         
-                        if st.button("Salvar (+)", key=f"btn_{row['ID']}"):
+                        # BOTÃO VERDE "ADICIONAR"
+                        if st.button("Adicionar", type="primary", key=f"btn_{row['ID']}"):
                             if new_url and new_desc:
                                 link_list.append({"desc": new_desc, "url": new_url})
                                 df.at[real_idx, "Links_Content"] = json.dumps(link_list)
@@ -726,7 +757,7 @@ with tab3:
     with st.expander("⚙️ Configurar Link do Drive"):
         st.info("Cole aqui o link da pasta do Google Drive onde estão os materiais.")
         new_link_input = st.text_input("Novo Link:", value=current_drive_link)
-        if st.button("Salvar Link do Drive"):
+        if st.button("Salvar Link do Drive", type="primary"):
             if new_link_input:
                 save_drive_link_file(new_link_input)
                 st.success("Link salvo! A página será recarregada.")
