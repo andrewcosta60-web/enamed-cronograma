@@ -5,11 +5,12 @@ import os
 import html
 import io
 import csv
+import json # Importante para salvar listas no CSV
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="wide") 
 
-# --- CSS GLOBAL (CORREÇÃO DE CONTRASTE E TAMANHO) ---
+# --- CSS GLOBAL ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -42,55 +43,38 @@ st.markdown("""
         background-color: #58cc02;
     }
     
-    /* === CORREÇÃO CRÍTICA DO DASHBOARD === */
-    /* Força o texto a ser PRETO mesmo no modo escuro */
-    .dash-container {
-        display: flex;
-        gap: 10px;
-        height: 100%;
-        align-items: center;
-        justify-content: flex-end;
-    }
+    /* === DASHBOARD === */
     .dash-card {
-        background-color: #f0f2f6 !important; /* Cinza claro */
-        border-radius: 8px;
-        padding: 8px 15px; /* Menor padding */
+        background-color: #f0f2f6;
+        border-radius: 10px;
+        padding: 10px;
         text-align: center;
         border: 1px solid #dcdcdc;
-        min-width: 100px;
+        height: 100%;
     }
     .dash-label {
-        font-size: 11px !important;
+        font-size: 12px !important;
         font-weight: bold !important;
-        color: #333333 !important; /* Cinza Escuro */
-        margin-bottom: 0px;
+        color: #555555 !important;
+        margin-bottom: 2px;
         text-transform: uppercase;
-        line-height: 1;
     }
     .dash-value {
-        font-size: 16px !important;
-        font-weight: 900 !important;
-        color: #000000 !important; /* PRETO PURO */
-        margin-top: 2px;
+        font-size: 18px !important;
+        font-weight: 800 !important;
+        color: #000000 !important;
+    }
+    
+    /* Título */
+    .custom-title {
+        font-size: 40px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        padding-bottom: 0px;
         line-height: 1.2;
     }
     
-    /* Título Personalizado */
-    .custom-title-container {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-    .custom-icon {
-        font-size: 50px;
-    }
-    .custom-title {
-        font-size: 32px;
-        font-weight: bold;
-        line-height: 1.1;
-    }
-    
-    /* Caixa de XP Sidebar */
+    /* XP Box */
     .xp-box {
         background-color: #262730;
         border: 1px solid #444;
@@ -105,29 +89,25 @@ st.markdown("""
         color: #58cc02;
     }
     
-    /* Tutorial Boxes */
-    .info-box {
-        background-color: #e3f2fd;
-        border-left: 5px solid #2196f3;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 10px;
+    /* Links salvos */
+    .saved-link-item {
+        background-color: #f9f9f9;
+        border: 1px solid #eee;
+        padding: 8px;
+        border-radius: 8px;
+        margin-bottom: 5px;
         color: black;
     }
-    .warning-box {
-        background-color: #fff3e0;
-        border-left: 5px solid #ff9800;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 10px;
-        color: black;
+    .saved-link-item a {
+        text-decoration: none;
+        color: #0068c9;
+        font-weight: bold;
     }
     </style>
 """, unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
-# Mudei o nome do arquivo para garantir que ele crie um novo do zero e corrija os dados vazios
-CSV_FILE = "enamed_db_v3.csv" 
+CSV_FILE = "enamed_db_v4.csv" # V4 para suportar listas JSON
 LINK_FILE = "drive_link.txt" 
 DEFAULT_USERS = [] 
 
@@ -406,7 +386,7 @@ def get_users_from_df(df):
 
 def init_db():
     if not os.path.exists(CSV_FILE):
-        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Link_Questões", "Link_Descricao"]
+        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Links_Content"]
         for user in DEFAULT_USERS:
             cols.extend([f"{user}_Status", f"{user}_Date"])
             
@@ -433,8 +413,7 @@ def init_db():
                 row_data['Disciplina'],
                 row_data['Tema'],
                 row_data['Meta_Diaria'],
-                "", # Link Vazio
-                ""  # Descrição Vazia
+                "[]" # Lista vazia em JSON
             ]
             for _ in DEFAULT_USERS: row.extend([False, None])
             initial_data.append(row)
@@ -662,25 +641,41 @@ with tab1:
 
                 c1, c2 = st.columns([4, 1])
                 with c1:
-                    with st.expander("🔗 Adicionar Link"):
-                        cur_link = row['Link_Questões']
-                        # Tenta pegar descrição, se não existir usa padrão
-                        if 'Link_Descricao' in row and pd.notna(row['Link_Descricao']) and row['Link_Descricao'] != "":
-                            desc_txt = row['Link_Descricao']
+                    with st.expander("🔗 Recursos / Links"):
+                        # Carregar lista de links (JSON)
+                        try:
+                            link_list = json.loads(row['Links_Content'])
+                        except:
+                            link_list = []
+
+                        # Exibir links existentes
+                        if link_list:
+                            for i_link, item in enumerate(link_list):
+                                st.markdown(f"""
+                                <div class="saved-link-item">
+                                    <a href="{item['url']}" target="_blank">🔗 {item['desc']}</a>
+                                </div>
+                                """, unsafe_allow_html=True)
                         else:
-                            desc_txt = "Acessar Material"
+                            st.caption("Nenhum link salvo ainda.")
+
+                        st.markdown("---")
+                        st.caption("Adicionar Novo:")
                         
-                        if cur_link:
-                            st.markdown(f"🔗 **[{desc_txt}]({cur_link})**")
+                        # Form para adicionar novo link
+                        new_desc = st.text_input("Nome (ex: Vídeo Aula):", key=f"d_{row['ID']}")
+                        new_url = st.text_input("URL:", key=f"u_{row['ID']}")
                         
-                        # Campos de Edição
-                        new_desc = st.text_input("Descrição (ex: Vídeo Aula):", key=f"d_{row['ID']}")
-                        new_link = st.text_input("Link (URL):", key=f"l_{row['ID']}")
-                        
-                        if st.button("Salvar", key=f"s_{row['ID']}"):
-                            df.at[real_idx, "Link_Questões"] = new_link
-                            df.at[real_idx, "Link_Descricao"] = new_desc
-                            save_data(df); st.success("Salvo!"); st.rerun()
+                        if st.button("Salvar (+)", key=f"btn_{row['ID']}"):
+                            if new_url and new_desc:
+                                link_list.append({"desc": new_desc, "url": new_url})
+                                df.at[real_idx, "Links_Content"] = json.dumps(link_list)
+                                save_data(df)
+                                st.success("Adicionado!")
+                                st.rerun()
+                            else:
+                                st.warning("Preencha nome e URL.")
+
                 with c2:
                     if status:
                         if st.button("Desfazer", key=f"r_{row['ID']}"):
