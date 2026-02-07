@@ -843,14 +843,18 @@ with tab4:
 # --- ABA 5: TUTORIAL ---
 with tab5:
     st.markdown("## 📚 Manual do Usuário Enamed")
+    
     st.markdown("""
     <div class="warning-box">
     <strong>⚠️ PRÉ-REQUISITO OBRIGATÓRIO</strong><br>
-    Este aplicativo é um <strong>GUIA DE ESTUDOS</strong> e <strong>TRACKER DE METAS</strong>. Ele não contém as aulas em si.<br><br>
-    Para estudar, você deve ter acesso ao <strong>Drive do Estratégia MED</strong> (ou seu material de preferência) contendo os PDFs e Vídeos das aulas citadas no cronograma.
+    Este aplicativo é um <strong>GUIA DE ESTUDOS</strong>. Ele não contém os vídeos/PDFs hospedados aqui.<br><br>
+    Para estudar, acesse o link do Drive do Estratégia MED disponível na aba <strong>📂 MATERIAL</strong>.<br>
+    Se você usa outro cursinho, sem problemas! Basta se guiar pelo <strong>Tema do Dia</strong> descrito no cronograma.
     </div>
     """, unsafe_allow_html=True)
+
     st.divider()
+
     st.markdown("### 🧠 Metodologia de Estudo")
     st.markdown("""
     Nossa abordagem é baseada em **Engenharia Reversa** e **Estudo Ativo**. Esqueça assistir 4 horas de aula passivamente!
@@ -859,7 +863,9 @@ with tab5:
     2.  **📝 Questões (80% do tempo):** Vá para o banco de questões e faça a meta do dia (ex: 15 questões).
     3.  **🔄 Engenharia Reversa:** O mais importante! Para cada questão que você errar (ou chutar), leia o comentário detalhado e entenda *por que* errou. Anote o conceito chave.
     """)
+
     st.divider()
+
     st.markdown("### 📱 Fluxo de Uso do App")
     st.markdown("""
     1.  **Abra o App:** Faça login com seu Avatar.
@@ -868,7 +874,9 @@ with tab5:
     4.  **Registre o Link (Opcional):** Se achar um resumo top ou o link direto da pasta, clique em *🔗 Adicionar Link* no app e cole lá para facilitar seu acesso futuro (e dos colegas).
     5.  **Conclua:** Volte ao app e clique em **✅ Concluir**. Pronto! Seus 100 XP estão garantidos.
     """)
+    
     st.divider()
+    
     col1, col2 = st.columns(2)
     with col1:
         st.info("📅 **Prazo:** Tente cumprir a meta no dia correto para ganhar pontuação máxima (Verde).")
