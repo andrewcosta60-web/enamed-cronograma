@@ -8,9 +8,8 @@ import csv
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="wide") 
-# Mudei layout para "wide" para caber o título e as caixas lado a lado
 
-# --- CSS GLOBAL (CORRIGIDO PARA CONTRASTE E TAMANHO) ---
+# --- CSS GLOBAL ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
@@ -43,9 +42,9 @@ st.markdown("""
         background-color: #58cc02;
     }
     
-    /* === CORREÇÃO DAS CAIXAS DE MÉTRICAS (DASHBOARD) === */
+    /* === CAIXAS DE MÉTRICAS (DASHBOARD) === */
     .dash-card {
-        background-color: #f0f2f6; /* Fundo Cinza Claro */
+        background-color: #f0f2f6;
         border-radius: 10px;
         padding: 10px;
         text-align: center;
@@ -55,17 +54,17 @@ st.markdown("""
     .dash-label {
         font-size: 12px !important;
         font-weight: bold !important;
-        color: #555555 !important; /* Texto Cinza Escuro (Sempre visível) */
+        color: #555555 !important;
         margin-bottom: 2px;
         text-transform: uppercase;
     }
     .dash-value {
         font-size: 18px !important;
         font-weight: 800 !important;
-        color: #000000 !important; /* Texto Preto (Sempre visível) */
+        color: #000000 !important;
     }
     
-    /* Título Personalizado para alinhar com as caixas */
+    /* Título Personalizado */
     .custom-title {
         font-size: 40px;
         font-weight: bold;
@@ -74,7 +73,7 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* Caixa de XP na Sidebar */
+    /* Caixa de XP */
     .xp-box {
         background-color: #262730;
         border: 1px solid #444;
@@ -88,11 +87,30 @@ st.markdown("""
         font-weight: bold;
         color: #58cc02;
     }
+    
+    /* Tutorial Boxes */
+    .info-box {
+        background-color: #e3f2fd;
+        border-left: 5px solid #2196f3;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        color: black;
+    }
+    .warning-box {
+        background-color: #fff3e0;
+        border-left: 5px solid #ff9800;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        color: black;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
 CSV_FILE = "enamed_daily_db.csv"
+LINK_FILE = "drive_link.txt" # Arquivo para salvar o link do drive
 DEFAULT_USERS = [] 
 
 # Avatares
@@ -414,6 +432,17 @@ def load_data():
 def save_data(df):
     df.to_csv(CSV_FILE, index=False)
 
+# FUNÇÕES PARA SALVAR O LINK DO DRIVE (PERSISTÊNCIA SIMPLES)
+def get_saved_link():
+    if os.path.exists(LINK_FILE):
+        with open(LINK_FILE, "r") as f:
+            return f.read().strip()
+    return ""
+
+def save_drive_link_file(new_link):
+    with open(LINK_FILE, "w") as f:
+        f.write(new_link)
+
 def add_new_user(df, new_name):
     if f"{new_name}_Status" in df.columns:
         return df, False, "Esse nome já existe!"
@@ -500,7 +529,7 @@ with st.sidebar:
         if f"{current_user}_Date" in df.columns:
             total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
     
-    # Caixa XP Personalizada (Visível no Dark Mode)
+    # Caixa XP Personalizada
     st.markdown(f"""
     <div class="xp-box">
         <div style="font-size: 14px; color: #aaa;">💎 XP Total</div>
@@ -509,7 +538,6 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # --- LAYOUT DO TOPO (TÍTULO + DASHBOARD) ---
-# Cálculo de Métricas
 today = date.today()
 df['dt_obj'] = pd.to_datetime(df['Data_Alvo']).dt.date
 
@@ -530,14 +558,13 @@ if f"{current_user}_Status" in df.columns:
     tasks_done = df[f"{current_user}_Status"].sum()
 pct_completo = (tasks_done / total_tasks) * 100 if total_tasks > 0 else 0
 
-# 3. Renderizar (Grid 2 colunas: Título | Dashboard)
+# 3. Renderizar
 c_title, c_dash = st.columns([1.5, 2.5])
 
 with c_title:
     st.markdown("<div class='custom-title'>🏥 Desafio<br>Enamed</div>", unsafe_allow_html=True)
 
 with c_dash:
-    # Pequenas cartas HTML lado a lado
     st.markdown(f"""
     <div style="display: flex; gap: 10px; height: 100%; align-items: center;">
         <div class="dash-card" style="flex: 1;">
@@ -560,7 +587,7 @@ st.caption(f"Você completou **{tasks_done}** de **{total_tasks}** atividades pr
 st.divider()
 
 # --- ABAS ---
-tab1, tab2, tab3, tab4 = st.tabs(["📚 Lições", "🏆 Placar", "⚙️ Admin", "🔰 Tutorial"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 Lições", "🏆 Placar", "📂 Material", "⚙️ Admin", "🔰 Tutorial"])
 
 # --- ABA 1: LIÇÕES ---
 with tab1:
@@ -660,8 +687,42 @@ with tab2:
         </div>
         """, unsafe_allow_html=True)
 
-# --- ABA 3: ADMIN ---
+# --- ABA 3: MATERIAL (NOVA ABA) ---
 with tab3:
+    st.markdown("## 📂 Repositório de Aulas")
+    st.markdown("""
+    Acesse abaixo o Google Drive contendo os PDFs, Vídeos e Resumos do Estratégia MED (ou seu material de preferência).
+    """)
+    
+    # Recuperar link salvo
+    current_drive_link = get_saved_link()
+    
+    if current_drive_link:
+        st.success("✅ Link do Drive configurado com sucesso!")
+        st.link_button("🚀 ACESSAR DRIVE DE ESTUDOS", current_drive_link, type="primary", use_container_width=True)
+    else:
+        st.warning("⚠️ Nenhum link configurado. Use a opção abaixo para adicionar.")
+    
+    st.divider()
+    
+    with st.expander("⚙️ Configurar Link do Drive"):
+        st.info("Cole aqui o link da pasta do Google Drive onde estão os materiais.")
+        new_link_input = st.text_input("Novo Link:", value=current_drive_link)
+        
+        if st.button("Salvar Link do Drive"):
+            if new_link_input:
+                save_drive_link_file(new_link_input)
+                st.success("Link salvo! A página será recarregada.")
+                st.rerun()
+            else:
+                st.error("Por favor, insira um link válido.")
+
+# --- ABA 4: ADMIN ---
+with tab3: # Note: This logic is tricky with index reuse, keeping separate tab variables is better.
+    # Re-using variable name logic, actually Tab 4 is Admin in list.
+    pass 
+
+with tab4:
     st.header("⚙️ Administração")
     if "admin_unlocked" not in st.session_state: st.session_state["admin_unlocked"] = False
     if not st.session_state["admin_unlocked"]:
@@ -680,8 +741,8 @@ with tab3:
         if st.button("🔒 Sair"):
             st.session_state["admin_unlocked"] = False; st.rerun()
 
-# --- ABA 4: TUTORIAL ---
-with tab4:
+# --- ABA 5: TUTORIAL ---
+with tab5:
     st.markdown("## 📚 Manual do Usuário Enamed")
     
     st.markdown("""
@@ -721,5 +782,3 @@ with tab4:
         st.info("📅 **Prazo:** Tente cumprir a meta no dia correto para ganhar pontuação máxima (Verde).")
     with col2:
         st.warning("🐢 **Atrasos:** Se fizer depois do prazo, a tarefa fica Amarela e vale metade dos pontos.")
-
-
