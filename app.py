@@ -80,7 +80,7 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* Foto de Perfil Redonda (Para Imagens) */
+    /* Foto de Perfil Redonda */
     .profile-pic-container {
         display: flex;
         justify-content: center;
@@ -94,7 +94,7 @@ st.markdown("""
         border: 3px solid #58cc02;
         box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    /* Emoji Grande (Para Avatares) */
+    /* Emoji Grande */
     .profile-emoji {
         font-size: 80px;
         text-align: center;
@@ -176,7 +176,7 @@ LINK_FILE = "drive_link.txt"
 PROFILE_FILE = "profiles.json" 
 DEFAULT_USERS = [] 
 
-# Avatares Disponíveis (Emojis)
+# Avatares
 AVATARS = [
     "👨‍⚕️", "👩‍⚕️", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🦄", "🐸", 
     "🦉", "🐙", "🦋", "🍄", "🔥", "🚀", "💡", "🧠", "🫀", "💊", 
@@ -867,14 +867,10 @@ with tab2:
     for i, row in df_p.iterrows():
         med, bg = ["🥇", "🥈", "🥉", ""][i] if i < 4 else "", "#fff5c2" if i == 0 else "#f9f9f9"
         
-        # Lógica de Exibição no Placar (Híbrido)
+        # Foto no Placar
         img_html = ""
         if row['Médico'] in profiles:
-            profile_data = profiles[row['Médico']]
-            if len(profile_data) > 20: # É imagem
-                img_html = f'<img src="data:image/png;base64,{profile_data}" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">'
-            else: # É emoji
-                img_html = f'<span style="font-size:24px; margin-right: 10px;">{profile_data}</span>'
+            img_html = f'<img src="data:image/png;base64,{profiles[row["Médico"]]}" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">'
         else:
             img_html = '<span style="font-size:20px; margin-right: 10px;">👤</span>'
 
@@ -893,11 +889,10 @@ with tab2:
 with tab3:
     st.markdown("## 📂 Repositório de Aulas")
     st.markdown("""
-    Acesse abaixo o Google Drive contendo os PDFs, Vídeos e Resumos do Estratégia MED (ou seu material de preferência).
+    Acesse abaixo o Google Drive contendo os PDFs, Vídeos e Resumos do Estratégia MED.
     """)
     current_drive_link = get_saved_link()
     if current_drive_link:
-        st.success("✅ Link do Drive configurado com sucesso!")
         st.link_button("🚀 ACESSAR DRIVE DE ESTUDOS", current_drive_link, type="primary", use_container_width=True)
     else:
         st.warning("⚠️ Nenhum link configurado. Use a opção abaixo para adicionar.")
