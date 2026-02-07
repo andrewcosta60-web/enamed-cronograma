@@ -19,35 +19,20 @@ st.markdown("""
         font-family: 'Varela Round', sans-serif;
     }
     
-    /* === ESTILIZAÇÃO DOS BOTÕES (CORREÇÃO VERDE) === */
-    /* Botão Primário (Adicionar, Concluir, Salvar) -> VERDE */
+    /* === BOTÕES === */
+    /* Botão Primário (Verde) */
     button[kind="primary"] {
         background-color: #58cc02 !important;
         border-color: #58cc02 !important;
         color: white !important;
         border-radius: 12px !important;
         font-weight: bold !important;
-        box-shadow: 0 4px 0 rgba(0,0,0,0.1) !important;
-        transition: all 0.2s !important;
     }
-    button[kind="primary"]:hover {
-        background-color: #45a002 !important;
-        border-color: #45a002 !important;
-        margin-top: 2px !important;
-        box-shadow: 0 2px 0 rgba(0,0,0,0.1) !important;
-    }
-    button[kind="primary"]:active {
-        margin-top: 4px !important;
-        box-shadow: none !important;
-    }
-
-    /* Botão Secundário (Entregar Atrasado, Desfazer) -> CINZA/PADRÃO */
+    
+    /* Botões Padrão (Cinza) */
     button[kind="secondary"] {
         border-radius: 12px !important;
         font-weight: bold !important;
-        border: 1px solid #e0e0e0 !important;
-        background-color: #ffffff !important;
-        color: #333 !important;
     }
 
     /* Input de Texto */
@@ -60,7 +45,7 @@ st.markdown("""
         background-color: #58cc02;
     }
     
-    /* === DASHBOARD (CORREÇÃO DE TEXTO PRETO) === */
+    /* === DASHBOARD === */
     .dash-card {
         background-color: #f0f2f6 !important;
         border-radius: 8px;
@@ -88,7 +73,7 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* Título Personalizado */
+    /* Título */
     .custom-title {
         font-size: 40px;
         font-weight: bold;
@@ -97,7 +82,7 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* Caixa de XP Sidebar */
+    /* XP Box */
     .xp-box {
         background-color: #262730;
         border: 1px solid #444;
@@ -112,26 +97,32 @@ st.markdown("""
         color: #58cc02;
     }
     
-    /* Lista de Links Salvos */
+    /* Lista de Links */
     .saved-link-item {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
         padding: 10px;
         border-radius: 10px;
-        margin-bottom: 8px;
+        margin-bottom: 0px; /* Margem controlada pelo container */
         display: flex;
         align-items: center;
         gap: 10px;
-        transition: background-color 0.2s;
-    }
-    .saved-link-item:hover {
-        background-color: #f9f9f9;
     }
     .saved-link-item a {
         text-decoration: none;
         color: #0068c9;
         font-weight: bold;
-        flex-grow: 1;
+    }
+    
+    /* Caixa de Confirmação de Exclusão */
+    .delete-confirm-box {
+        background-color: #ffe6e6;
+        border: 1px solid #ffcccc;
+        padding: 10px;
+        border-radius: 8px;
+        margin-top: 5px;
+        margin-bottom: 10px;
+        text-align: center;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -672,20 +663,52 @@ with tab1:
                 c1, c2 = st.columns([4, 1])
                 with c1:
                     with st.expander("🔗 Recursos / Links"):
-                        # Carregar lista de links (JSON)
                         try:
                             link_list = json.loads(row['Links_Content'])
                         except:
                             link_list = []
 
-                        # Exibir links existentes
+                        # Lista de Links com Lixeira
                         if link_list:
                             for i_link, item in enumerate(link_list):
-                                st.markdown(f"""
-                                <div class="saved-link-item">
-                                    <a href="{item['url']}" target="_blank">🔗 {item['desc']}</a>
-                                </div>
-                                """, unsafe_allow_html=True)
+                                # Layout: Link texto (esq) | Botão Lixeira (dir)
+                                c_link, c_del = st.columns([6, 1])
+                                
+                                with c_link:
+                                    st.markdown(f"""
+                                    <div class="saved-link-item">
+                                        <a href="{item['url']}" target="_blank">🔗 {item['desc']}</a>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                                    
+                                with c_del:
+                                    # Botão de Deletar
+                                    if st.button("🗑️", key=f"del_{row['ID']}_{i_link}"):
+                                        # Ativa estado de confirmação
+                                        st.session_state[f"confirm_delete_{row['ID']}_{i_link}"] = True
+                                        st.rerun()
+                                
+                                # Área de Confirmação (Aparece se clicou na lixeira)
+                                if st.session_state.get(f"confirm_delete_{row['ID']}_{i_link}"):
+                                    with st.container():
+                                        st.markdown(f"""
+                                        <div class="delete-confirm-box">
+                                            <small style="color: #cc0000; font-weight: bold;">Excluir "{item['desc']}"?</small>
+                                        </div>
+                                        """, unsafe_allow_html=True)
+                                        
+                                        col_conf_1, col_conf_2 = st.columns(2)
+                                        if col_conf_1.button("✅ Sim", key=f"yes_{row['ID']}_{i_link}"):
+                                            link_list.pop(i_link) # Remove da lista
+                                            df.at[real_idx, "Links_Content"] = json.dumps(link_list) # Salva
+                                            save_data(df)
+                                            del st.session_state[f"confirm_delete_{row['ID']}_{i_link}"] # Limpa estado
+                                            st.rerun()
+                                            
+                                        if col_conf_2.button("❌ Não", key=f"no_{row['ID']}_{i_link}"):
+                                            del st.session_state[f"confirm_delete_{row['ID']}_{i_link}"] # Limpa estado
+                                            st.rerun()
+
                         else:
                             st.caption("Nenhum link salvo ainda.")
 
@@ -696,7 +719,6 @@ with tab1:
                         new_desc = st.text_input("Nome (ex: Vídeo Aula):", key=f"d_{row['ID']}")
                         new_url = st.text_input("URL:", key=f"u_{row['ID']}")
                         
-                        # BOTÃO VERDE "ADICIONAR"
                         if st.button("Adicionar", type="primary", key=f"btn_{row['ID']}"):
                             if new_url and new_desc:
                                 link_list.append({"desc": new_desc, "url": new_url})
