@@ -20,7 +20,6 @@ st.markdown("""
     }
     
     /* === BOTÕES === */
-    /* Botão Primário (Verde) */
     button[kind="primary"] {
         background-color: #58cc02 !important;
         border-color: #58cc02 !important;
@@ -29,7 +28,6 @@ st.markdown("""
         font-weight: bold !important;
     }
     
-    /* Botões Padrão (Cinza) */
     button[kind="secondary"] {
         border-radius: 12px !important;
         font-weight: bold !important;
@@ -103,7 +101,7 @@ st.markdown("""
         border: 1px solid #e0e0e0;
         padding: 10px;
         border-radius: 10px;
-        margin-bottom: 0px; /* Margem controlada pelo container */
+        margin-bottom: 0px;
         display: flex;
         align-items: center;
         gap: 10px;
@@ -114,7 +112,7 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* Caixa de Confirmação de Exclusão */
+    /* Caixa de Confirmação */
     .delete-confirm-box {
         background-color: #ffe6e6;
         border: 1px solid #ffcccc;
@@ -123,6 +121,24 @@ st.markdown("""
         margin-top: 5px;
         margin-bottom: 10px;
         text-align: center;
+    }
+    
+    /* Tutorial Boxes */
+    .info-box {
+        background-color: #e3f2fd;
+        border-left: 5px solid #2196f3;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        color: black;
+    }
+    .warning-box {
+        background-color: #fff3e0;
+        border-left: 5px solid #ff9800;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        color: black;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -668,10 +684,9 @@ with tab1:
                         except:
                             link_list = []
 
-                        # Lista de Links com Lixeira
+                        # Lista de Links com Lixeira e Confirmação
                         if link_list:
                             for i_link, item in enumerate(link_list):
-                                # Layout: Link texto (esq) | Botão Lixeira (dir)
                                 c_link, c_del = st.columns([6, 1])
                                 
                                 with c_link:
@@ -682,13 +697,12 @@ with tab1:
                                     """, unsafe_allow_html=True)
                                     
                                 with c_del:
-                                    # Botão de Deletar
-                                    if st.button("🗑️", key=f"del_{row['ID']}_{i_link}"):
-                                        # Ativa estado de confirmação
+                                    # Botão Lixeira
+                                    if st.button("🗑️", key=f"del_{row['ID']}_{i_link}", type="secondary"):
                                         st.session_state[f"confirm_delete_{row['ID']}_{i_link}"] = True
                                         st.rerun()
                                 
-                                # Área de Confirmação (Aparece se clicou na lixeira)
+                                # Área de Confirmação
                                 if st.session_state.get(f"confirm_delete_{row['ID']}_{i_link}"):
                                     with st.container():
                                         st.markdown(f"""
@@ -699,14 +713,14 @@ with tab1:
                                         
                                         col_conf_1, col_conf_2 = st.columns(2)
                                         if col_conf_1.button("✅ Sim", key=f"yes_{row['ID']}_{i_link}"):
-                                            link_list.pop(i_link) # Remove da lista
-                                            df.at[real_idx, "Links_Content"] = json.dumps(link_list) # Salva
+                                            link_list.pop(i_link)
+                                            df.at[real_idx, "Links_Content"] = json.dumps(link_list)
                                             save_data(df)
-                                            del st.session_state[f"confirm_delete_{row['ID']}_{i_link}"] # Limpa estado
+                                            del st.session_state[f"confirm_delete_{row['ID']}_{i_link}"]
                                             st.rerun()
                                             
                                         if col_conf_2.button("❌ Não", key=f"no_{row['ID']}_{i_link}"):
-                                            del st.session_state[f"confirm_delete_{row['ID']}_{i_link}"] # Limpa estado
+                                            del st.session_state[f"confirm_delete_{row['ID']}_{i_link}"]
                                             st.rerun()
 
                         else:
@@ -715,7 +729,6 @@ with tab1:
                         st.markdown("---")
                         st.caption("Adicionar Novo:")
                         
-                        # Form para adicionar novo link
                         new_desc = st.text_input("Nome (ex: Vídeo Aula):", key=f"d_{row['ID']}")
                         new_url = st.text_input("URL:", key=f"u_{row['ID']}")
                         
@@ -777,14 +790,35 @@ with tab3:
         st.warning("⚠️ Nenhum link configurado. Use a opção abaixo para adicionar.")
     st.divider()
     with st.expander("⚙️ Configurar Link do Drive"):
-        st.info("Cole aqui o link da pasta do Google Drive onde estão os materiais.")
-        new_link_input = st.text_input("Novo Link:", value=current_drive_link)
-        if st.button("Salvar Link do Drive", type="primary"):
-            if new_link_input:
-                save_drive_link_file(new_link_input)
-                st.success("Link salvo! A página será recarregada.")
-                st.rerun()
-            else: st.error("Por favor, insira um link válido.")
+        # Initialize state
+        if "drive_unlocked" not in st.session_state:
+            st.session_state["drive_unlocked"] = False
+
+        if not st.session_state["drive_unlocked"]:
+            drive_pwd = st.text_input("Senha para alterar:", type="password", key="drive_pwd_input")
+            if st.button("Desbloquear", key="btn_unlock_drive"):
+                if drive_pwd == "UNIARP":
+                    st.session_state["drive_unlocked"] = True
+                    st.rerun()
+                else:
+                    st.error("Senha incorreta!")
+        else:
+            st.info("Cole aqui o link da pasta do Google Drive onde estão os materiais.")
+            new_link_input = st.text_input("Novo Link:", value=current_drive_link)
+            
+            c_save, c_lock = st.columns([1, 1])
+            with c_save:
+                if st.button("Salvar Link do Drive", type="primary"):
+                    if new_link_input:
+                        save_drive_link_file(new_link_input)
+                        st.success("Link salvo! A página será recarregada.")
+                        st.rerun()
+                    else:
+                        st.error("Por favor, insira um link válido.")
+            with c_lock:
+                if st.button("Bloquear"):
+                    st.session_state["drive_unlocked"] = False
+                    st.rerun()
 
 # --- ABA 4: ADMIN ---
 with tab4:
