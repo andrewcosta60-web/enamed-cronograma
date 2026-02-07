@@ -21,7 +21,26 @@ st.markdown("""
         font-family: 'Varela Round', sans-serif;
     }
     
-    /* Botões */
+    /* === TRADUÇÃO FORÇADA DO UPLOAD DE ARQUIVO === */
+    /* Esconde o texto original em inglês */
+    [data-testid="stFileUploaderDropzoneInstructions"] > div > span {
+        display: none;
+    }
+    /* Insere o texto em português */
+    [data-testid="stFileUploaderDropzoneInstructions"] > div::after {
+        content: "Arraste sua foto aqui ou clique para buscar";
+        font-size: 14px;
+        color: #888;
+        font-weight: bold;
+        display: block;
+        margin-top: -10px;
+    }
+    /* Esconde o limite de tamanho original */
+    [data-testid="stFileUploaderDropzoneInstructions"] > div > small {
+        display: none;
+    }
+    
+    /* === BOTÕES === */
     button[kind="primary"] {
         background-color: #58cc02 !important;
         border-color: #58cc02 !important;
@@ -29,22 +48,23 @@ st.markdown("""
         border-radius: 12px !important;
         font-weight: bold !important;
     }
+    
     button[kind="secondary"] {
         border-radius: 12px !important;
         font-weight: bold !important;
     }
 
-    /* Input */
+    /* Input de Texto */
     .stTextInput > div > div > input {
         border-radius: 10px;
     }
     
-    /* Progress Bar */
+    /* Barra de Progresso */
     .stProgress > div > div > div > div {
         background-color: #58cc02;
     }
     
-    /* Dashboard */
+    /* === DASHBOARD === */
     .dash-card {
         background-color: #f0f2f6 !important;
         border-radius: 8px;
@@ -72,19 +92,13 @@ st.markdown("""
         line-height: 1.2;
     }
     
-    /* Foto de Perfil Redonda */
-    .profile-pic-container {
-        display: flex;
-        justify-content: center;
-        margin-bottom: 15px;
-    }
-    .profile-pic {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #58cc02;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    /* Título */
+    .custom-title {
+        font-size: 40px;
+        font-weight: bold;
+        margin-bottom: 0px;
+        padding-bottom: 0px;
+        line-height: 1.2;
     }
     
     /* XP Box */
@@ -102,7 +116,7 @@ st.markdown("""
         color: #58cc02;
     }
     
-    /* Links */
+    /* Lista de Links */
     .saved-link-item {
         background-color: #ffffff;
         border: 1px solid #e0e0e0;
@@ -119,7 +133,7 @@ st.markdown("""
         font-weight: bold;
     }
     
-    /* Confirmação Delete */
+    /* Caixa de Confirmação */
     .delete-confirm-box {
         background-color: #ffe6e6;
         border: 1px solid #ffcccc;
@@ -130,7 +144,7 @@ st.markdown("""
         text-align: center;
     }
     
-    /* Avisos */
+    /* Tutorial Boxes */
     .info-box {
         background-color: #e3f2fd;
         border-left: 5px solid #2196f3;
@@ -147,23 +161,20 @@ st.markdown("""
         margin-bottom: 10px;
         color: black;
     }
-    
-    /* Título */
-    .custom-title {
-        font-size: 40px;
-        font-weight: bold;
-        margin-bottom: 0px;
-        padding-bottom: 0px;
-        line-height: 1.2;
-    }
     </style>
 """, unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
 CSV_FILE = "enamed_db_v4.csv"
 LINK_FILE = "drive_link.txt" 
-PROFILE_FILE = "profiles.json" # Arquivo novo para guardar as fotos
+PROFILE_FILE = "profiles.json" 
 DEFAULT_USERS = [] 
+
+# Avatares
+AVATARS = [
+    "👨‍⚕️", "👩‍⚕️", "🏥", "🧠", "🫀", "🧬", "🚑", "🩺", "💉", "💊", 
+    "🦠", "🩸", "🎓", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🚀", "💡", "🔥"
+]
 
 # --- DADOS DO CRONOGRAMA ---
 RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
@@ -434,7 +445,7 @@ def get_users_from_df(df):
 
 def init_db():
     if not os.path.exists(CSV_FILE):
-        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Link_Questões", "Links_Content"]
+        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Links_Content"]
         for user in DEFAULT_USERS:
             cols.extend([f"{user}_Status", f"{user}_Date"])
             
@@ -461,8 +472,7 @@ def init_db():
                 row_data['Disciplina'],
                 row_data['Tema'],
                 row_data['Meta_Diaria'],
-                "", # Link Vazio (Legado)
-                "[]" # Lista vazia em JSON (Novo)
+                "[]" # Lista vazia em JSON
             ]
             for _ in DEFAULT_USERS: row.extend([False, None])
             initial_data.append(row)
@@ -573,7 +583,9 @@ if "logged_user" not in st.session_state:
             with tab_register:
                 st.write("### Criar novo perfil")
                 nm = st.text_input("Seu Nome")
-                uploaded_file = st.file_uploader("Sua Foto (Opcional)", type=['png', 'jpg', 'jpeg'])
+                
+                # --- AQUI ESTÁ A ALTERAÇÃO ---
+                uploaded_file = st.file_uploader("Adicione sua foto aqui (Opcional)", type=['png', 'jpg', 'jpeg'])
                 
                 if st.button("Salvar e Entrar"):
                     if nm and len(nm) > 2:
@@ -831,14 +843,15 @@ with tab2:
         placar.append({"Médico": u, "XP": pts, "Tarefas": tasks})
     df_p = pd.DataFrame(placar).sort_values("XP", ascending=False).reset_index(drop=True)
     for i, row in df_p.iterrows():
-        # Tenta pegar a foto
+        med, bg = ["🥇", "🥈", "🥉", ""][i] if i < 4 else "", "#fff5c2" if i == 0 else "#f9f9f9"
+        
+        # Foto no Placar
         img_html = ""
         if row['Médico'] in profiles:
             img_html = f'<img src="data:image/png;base64,{profiles[row["Médico"]]}" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">'
         else:
             img_html = '<span style="font-size:20px; margin-right: 10px;">👤</span>'
 
-        med, bg = ["🥇", "🥈", "🥉", ""][i] if i < 4 else "", "#fff5c2" if i == 0 else "#f9f9f9"
         st.markdown(f"""
         <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; font-family: 'Varela Round', sans-serif; color: black; align-items: center;">
             <div style="display: flex; align-items: center;">
