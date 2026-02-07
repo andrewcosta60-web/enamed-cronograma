@@ -867,10 +867,14 @@ with tab2:
     for i, row in df_p.iterrows():
         med, bg = ["🥇", "🥈", "🥉", ""][i] if i < 4 else "", "#fff5c2" if i == 0 else "#f9f9f9"
         
-        # Foto no Placar
+        # Foto no Placar (CORREÇÃO DE BUG: VERIFICA SE É FOTO OU EMOJI)
         img_html = ""
         if row['Médico'] in profiles:
-            img_html = f'<img src="data:image/png;base64,{profiles[row["Médico"]]}" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">'
+            profile_data = profiles[row['Médico']]
+            if len(profile_data) > 20: # É imagem (Base64 longo)
+                img_html = f'<img src="data:image/png;base64,{profile_data}" style="width: 30px; height: 30px; border-radius: 50%; vertical-align: middle; margin-right: 10px;">'
+            else: # É emoji (Texto curto)
+                img_html = f'<span style="font-size:24px; margin-right: 10px;">{profile_data}</span>'
         else:
             img_html = '<span style="font-size:20px; margin-right: 10px;">👤</span>'
 
@@ -891,12 +895,16 @@ with tab3:
     st.markdown("""
     Acesse abaixo o Google Drive contendo os PDFs, Vídeos e Resumos do Estratégia MED.
     """)
+    
     current_drive_link = get_saved_link()
+    
     if current_drive_link:
         st.link_button("🚀 ACESSAR DRIVE DE ESTUDOS", current_drive_link, type="primary", use_container_width=True)
     else:
         st.warning("⚠️ Nenhum link configurado. Use a opção abaixo para adicionar.")
+    
     st.divider()
+    
     with st.expander("⚙️ Configurar Link do Drive"):
         # Initialize state
         if "drive_unlocked" not in st.session_state:
