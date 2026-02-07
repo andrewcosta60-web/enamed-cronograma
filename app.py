@@ -721,3 +721,6 @@ with tab4:
         st.info("📅 **Prazo:** Tente cumprir a meta no dia correto para ganhar pontuação máxima (Verde).")
     with col2:
         st.warning("🐢 **Atrasos:** Se fizer depois do prazo, a tarefa fica Amarela e vale metade dos pontos.")
+
+streamlit run app.py
+
