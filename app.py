@@ -722,5 +722,4 @@ with tab4:
     with col2:
         st.warning("🐢 **Atrasos:** Se fizer depois do prazo, a tarefa fica Amarela e vale metade dos pontos.")
 
-streamlit run app.py
 
