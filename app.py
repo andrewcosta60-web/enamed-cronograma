@@ -1,21 +1,19 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 import os
 import html
 import io
 import csv
 import json
 import base64
+import uuid
 from PIL import Image
-import pytz # Fuso Horário
-import uuid # Para ID único das mensagens
 
-# --- CONFIGURAÇÃO DE FUSO HORÁRIO (BRASÍLIA) ---
-TZ_BRAZIL = pytz.timezone('America/Sao_Paulo')
-
+# --- CONFIGURAÇÃO DE FUSO HORÁRIO (FORÇADA UTC-3) ---
 def get_brazil_time():
-    return datetime.now(TZ_BRAZIL)
+    # Pega o horario universal e subtrai 3 horas (Brasilia)
+    return datetime.utcnow() - timedelta(hours=3)
 
 def get_brazil_date():
     return get_brazil_time().date()
@@ -36,15 +34,11 @@ st.markdown("""
     [data-testid="stFileUploaderDropzoneInstructions"] > div > span { display: none; }
     [data-testid="stFileUploaderDropzoneInstructions"] > div::after {
         content: "Arraste sua foto aqui ou clique para buscar";
-        font-size: 14px;
-        color: #888;
-        font-weight: bold;
-        display: block;
-        margin-top: -10px;
+        font-size: 14px; color: #888; font-weight: bold; display: block; margin-top: -10px;
     }
     [data-testid="stFileUploaderDropzoneInstructions"] > div > small { display: none; }
     
-    /* === BOTÕES === */
+    /* === BOTÕES GERAIS === */
     button[kind="primary"] {
         background-color: #58cc02 !important;
         border-color: #58cc02 !important;
@@ -52,137 +46,87 @@ st.markdown("""
         border-radius: 12px !important;
         font-weight: bold !important;
     }
-    button[kind="secondary"] {
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        border: 1px solid #ddd !important;
+    
+    /* === CHAT VISUAL === */
+    .chat-row {
+        display: flex;
+        align-items: center; /* Alinha verticalmente lixeira e texto */
+        margin-bottom: 8px;
+        width: 100%;
     }
-
-    /* === CHAT ESTILO === */
+    
     .chat-msg-container {
         display: flex;
         gap: 8px;
-        margin-bottom: 8px;
         align-items: flex-start;
         font-size: 12px;
-    }
-    .chat-avatar-img {
-        width: 25px;
-        height: 25px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 1px solid #ddd;
-        flex-shrink: 0;
-    }
-    .chat-avatar-emoji {
-        width: 25px;
-        height: 25px;
-        font-size: 18px;
-        text-align: center;
-        flex-shrink: 0;
-    }
-    .chat-bubble {
-        background-color: #f0f2f6;
-        padding: 6px 10px;
-        border-radius: 10px;
-        border-top-left-radius: 0px;
         flex-grow: 1;
-        color: #333;
-        line-height: 1.3;
-    }
-    .chat-header {
-        font-size: 10px;
-        color: #888;
-        margin-bottom: 2px;
-        display: flex;
-        justify-content: space-between;
-    }
-    .chat-header strong {
-        color: #58cc02;
     }
     
-    /* Botão de excluir mensagem pequeno */
-    .stButton.delete-msg-btn button {
-        padding: 0px 5px !important;
-        font-size: 10px !important;
-        height: 25px !important;
-        line-height: 1 !important;
+    .chat-avatar-img {
+        width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0;
+    }
+    .chat-avatar-emoji {
+        width: 28px; height: 28px; font-size: 20px; text-align: center; flex-shrink: 0;
+    }
+    
+    .chat-bubble {
+        background-color: #f0f2f6;
+        padding: 8px 12px;
+        border-radius: 10px;
+        border-top-left-radius: 0px;
+        color: #333;
+        line-height: 1.3;
+        min-width: 100px;
+    }
+    
+    .chat-header {
+        font-size: 10px; color: #888; margin-bottom: 3px; display: flex; justify-content: space-between; gap: 10px;
+    }
+    .chat-header strong { color: #58cc02; }
+
+    /* Botão de Lixeira Discreto */
+    button[kind="secondary"].delete-btn {
         border: none !important;
+        background: transparent !important;
+        color: #ff4b4b !important;
+        padding: 0px !important;
+        font-size: 16px !important;
+    }
+    button[kind="secondary"].delete-btn:hover {
+        color: #ff0000 !important;
+        background: #ffe6e6 !important;
     }
 
     /* === PERFIL SIDEBAR === */
     .profile-pic-sidebar {
-        width: 90px;
-        height: 90px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #58cc02;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        display: block;
-        margin: 0 auto;
+        width: 90px; height: 90px; border-radius: 50%; object-fit: cover;
+        border: 3px solid #58cc02; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        display: block; margin: 0 auto;
     }
-    .profile-emoji-sidebar {
-        font-size: 60px;
-        text-align: center;
-        display: block;
-        margin: 0 auto;
-    }
-    .profile-name {
-        text-align: center;
-        font-weight: bold;
-        font-size: 16px;
-        margin-top: 5px;
-        margin-bottom: 5px;
-    }
+    .profile-emoji-sidebar { font-size: 60px; text-align: center; display: block; margin: 0 auto; }
+    .profile-name { text-align: center; font-weight: bold; font-size: 16px; margin-top: 5px; margin-bottom: 5px; }
     
     /* XP Box */
     .xp-box {
-        background-color: #262730;
-        border: 1px solid #444;
-        border-radius: 10px;
-        padding: 8px;
-        text-align: center;
-        margin-top: 5px;
-        margin-bottom: 10px;
+        background-color: #262730; border: 1px solid #444; border-radius: 10px;
+        padding: 8px; text-align: center; margin-top: 5px; margin-bottom: 10px;
     }
-    .xp-val {
-        font-size: 20px;
-        font-weight: bold;
-        color: #58cc02;
-    }
-    
-    /* Links Salvos */
-    .saved-link-item {
-        background-color: #ffffff;
-        border: 1px solid #e0e0e0;
-        padding: 10px;
-        border-radius: 10px;
-        margin-bottom: 0px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    .saved-link-item a { text-decoration: none; color: #0068c9; font-weight: bold; }
+    .xp-val { font-size: 20px; font-weight: bold; color: #58cc02; }
     
     /* Outros */
     .stProgress > div > div > div > div { background-color: #58cc02; }
     .dash-card {
-        background-color: #f0f2f6 !important;
-        border-radius: 8px;
-        padding: 8px 15px;
-        text-align: center;
-        border: 1px solid #dcdcdc;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px;
+        text-align: center; border: 1px solid #dcdcdc; height: 100%;
+        display: flex; flex-direction: column; justify-content: center;
     }
     .dash-label { font-size: 11px !important; font-weight: bold !important; color: #333 !important; text-transform: uppercase; }
     .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
     .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
-    .delete-confirm-box { background-color: #ffe6e6; border: 1px solid #ffcccc; padding: 5px; border-radius: 5px; text-align: center; font-size: 12px; margin-bottom: 5px;}
+    .saved-link-item { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 10px; border-radius: 10px; margin-bottom: 0px; display: flex; align-items: center; gap: 10px; }
+    .saved-link-item a { text-decoration: none; color: #0068c9; font-weight: bold; }
     .warning-box { background-color: #fff3e0; border-left: 5px solid #ff9800; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
-    .info-box { background-color: #e3f2fd; border-left: 5px solid #2196f3; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -193,7 +137,6 @@ PROFILE_FILE = "profiles.json"
 CHAT_FILE = "chat_db.json"
 DEFAULT_USERS = [] 
 
-# Avatares
 AVATARS = [
     "👨‍⚕️", "👩‍⚕️", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🦄", "🐸", 
     "🦉", "🐙", "🦋", "🍄", "🔥", "🚀", "💡", "🧠", "🫀", "💊", 
@@ -486,7 +429,7 @@ def init_db():
                 dt_obj = datetime.strptime(date_str, "%d/%m/%Y").date()
                 formatted_date = str(dt_obj)
             except:
-                formatted_date = str(get_brazil_date()) # DATA CORRIGIDA
+                formatted_date = str(get_brazil_date()) 
 
             row = [
                 i + 1, 
@@ -496,8 +439,8 @@ def init_db():
                 row_data['Disciplina'],
                 row_data['Tema'],
                 row_data['Meta_Diaria'],
-                "", # Link Vazio
-                "[]" # Lista vazia em JSON
+                "", 
+                "[]"
             ]
             for _ in DEFAULT_USERS: row.extend([False, None])
             initial_data.append(row)
@@ -574,22 +517,24 @@ def load_chat():
 def save_chat_message(user, msg, avatar_data):
     messages = load_chat()
     new_msg = {
-        "id": str(uuid.uuid4()), # ID ÚNICO
+        "id": str(uuid.uuid4()), 
         "user": user,
         "msg": msg,
         "time": get_brazil_time().strftime("%d/%m %H:%M"), # HORA CORRIGIDA
         "avatar": avatar_data
     }
     messages.append(new_msg)
-    if len(messages) > 50: messages = messages[-50:] # Limita histórico
+    if len(messages) > 50: messages = messages[-50:] 
     with open(CHAT_FILE, "w") as f:
         json.dump(messages, f)
 
 def delete_chat_message(msg_id):
     messages = load_chat()
-    messages = [m for m in messages if m.get("id") != msg_id]
+    # Filtra mantendo apenas as mensagens que NÃO têm o ID igual ao que queremos apagar
+    new_messages = [m for m in messages if m.get("id") != msg_id]
+    
     with open(CHAT_FILE, "w") as f:
-        json.dump(messages, f)
+        json.dump(new_messages, f)
 
 # --- INICIALIZAÇÃO ---
 df = load_data()
@@ -668,9 +613,9 @@ with st.sidebar:
     # 1. PERFIL
     if current_user in profiles:
         profile_data = profiles[current_user]
-        if len(profile_data) > 20: # Imagem
+        if len(profile_data) > 20: 
             st.markdown(f"""<div class="profile-pic-container"><img class="profile-pic" src="data:image/png;base64,{profile_data}"></div>""", unsafe_allow_html=True)
-        else: # Emoji
+        else:
             st.markdown(f"<div class='profile-emoji'>{profile_data}</div>", unsafe_allow_html=True)
     else:
         st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
@@ -690,37 +635,48 @@ with st.sidebar:
     st.markdown(f"""<div class="xp-box"><div style="font-size: 14px; color: #aaa;">💎 XP Total</div><div class="xp-val">{total_xp}</div></div>""", unsafe_allow_html=True)
     st.divider()
 
-    # 3. CHAT (FIXO NO FIM)
+    # 3. CHAT (FIXO NO FIM - CORRIGIDO ALINHAMENTO)
     st.markdown("### 💬 Chat da Turma")
-    chat_container = st.container(height=200)
+    chat_container = st.container(height=250)
     messages = load_chat()
     
     with chat_container:
         if not messages: st.caption("Nenhuma mensagem ainda.")
         for i, m in enumerate(messages):
-            # Layout: Mensagem (Esq) | Botão Excluir (Dir - só se for dono)
-            cols_chat = st.columns([8, 1])
+            # ALINHAMENTO PERFEITO: COLUNAS
+            cols_chat = st.columns([0.85, 0.15])
             
             with cols_chat[0]:
                 av_html = ""
-                if len(m['avatar']) > 20: av_html = f'<img class="chat-avatar-img" src="data:image/png;base64,{m["avatar"]}">'
-                else: av_html = f'<div class="chat-avatar-emoji">{m["avatar"]}</div>'
+                if len(m['avatar']) > 20: 
+                    av_html = f'<img class="chat-avatar-img" src="data:image/png;base64,{m["avatar"]}">'
+                else: 
+                    av_html = f'<div class="chat-avatar-emoji">{m["avatar"]}</div>'
+                
+                # HTML Estruturado
                 st.markdown(f"""
-                <div class="chat-msg-container">
-                    {av_html}
-                    <div class="chat-bubble">
-                        <div class="chat-header"><strong>{m['user']}</strong> <span>{m['time']}</span></div>
-                        {m['msg']}
+                <div class="chat-row">
+                    <div class="chat-msg-container">
+                        {av_html}
+                        <div class="chat-bubble">
+                            <div class="chat-header"><strong>{m['user']}</strong> <span>{m['time']}</span></div>
+                            {m['msg']}
+                        </div>
                     </div>
                 </div>""", unsafe_allow_html=True)
             
             with cols_chat[1]:
-                # Só mostra lixeira se a mensagem for do usuário atual
+                # BOTÃO DE LIXEIRA ALINHADO
                 if m['user'] == current_user:
-                    # Usar um ID único ou fallback para index se mensagem antiga
-                    msg_id = m.get("id", i) 
-                    if st.button("🗑️", key=f"del_msg_{msg_id}", help="Apagar mensagem"):
-                        delete_chat_message(msg_id)
+                    msg_id = m.get("id", "old") # Fallback para msgs antigas
+                    # Usando botão secundário com estilo "delete-btn"
+                    if st.button("🗑️", key=f"del_msg_{i}_{msg_id}", type="secondary", help="Apagar"):
+                        if msg_id == "old":
+                            # Se for msg antiga sem ID, remove pelo índice (arriscado mas funciona pra limpar)
+                            messages.pop(i)
+                            with open(CHAT_FILE, "w") as f: json.dump(messages, f)
+                        else:
+                            delete_chat_message(msg_id)
                         st.rerun()
             
     if prompt := st.chat_input("Mensagem...", key="sidebar_chat"):
@@ -832,7 +788,7 @@ with tab1:
                         lbl_b = "Entregar" if today > d_alvo else "Concluir"
                         if st.button(lbl_b, key=f"c{row['ID']}", type=btn_t):
                             df.at[idx, f"{current_user}_Status"] = True
-                            df.at[idx, f"{current_user}_Date"] = str(get_brazil_date()) # DATA CORRIGIDA
+                            df.at[idx, f"{current_user}_Date"] = str(date.today())
                             save_data(df); st.rerun()
                 st.divider()
 
