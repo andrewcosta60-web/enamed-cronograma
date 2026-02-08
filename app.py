@@ -198,7 +198,7 @@ AVATARS = [
     "💉", "🦠", "🧬", "🩺", "🚑", "🏥", "🐧", "🦈", "🦅", "🐺"
 ]
 
-# --- DADOS DO CRONOGRAMA (COMPLETO) ---
+# --- DADOS DO CRONOGRAMA ---
 RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 20/02/2026,Sex,1,Pediatria,Imunizações (Calendário),15 Questões + Eng. Reversa
 21/02/2026,Sáb,1,Medicina Preventiva,Vigilância em Saúde,30 Questões + Sprint Semanal
