@@ -106,21 +106,32 @@ st.markdown("""
     }
     .chat-header strong { color: #58cc02; }
 
-    /* === PERFIL SIDEBAR === */
+   /* === PERFIL SIDEBAR (ATUALIZADO V14) === */
     .profile-pic-sidebar {
-        width: 100px; height: 100px; border-radius: 50%; object-fit: cover;
-        border: 4px solid #58cc02; box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        display: block; margin: 0 auto;
+        width: 150px; /* Aumentei de 100px para 150px */
+        height: 150px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #58cc02;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3); /* Sombra mais forte */
+        display: block;
+        margin: 0 auto;
     }
-    .profile-emoji-sidebar { font-size: 70px; text-align: center; display: block; margin: 0 auto; }
-    .profile-name { text-align: center; font-weight: 900; font-size: 18px; margin-top: 10px; margin-bottom: 5px; color: #333; }
-    
-    /* XP Box */
-    .xp-box {
-        background-color: #262730; border: 1px solid #444; border-radius: 10px;
-        padding: 8px; text-align: center; margin-top: 5px; margin-bottom: 15px;
+    .profile-emoji-sidebar { 
+        font-size: 110px; /* Aumentei de 70px para 110px */
+        text-align: center; 
+        display: block; 
+        margin: 0 auto; 
     }
-    .xp-val { font-size: 24px; font-weight: bold; color: #58cc02; }
+    .profile-name { 
+        text-align: center; 
+        font-weight: 900; 
+        font-size: 24px; /* Letra maior */
+        margin-top: 15px; 
+        margin-bottom: 10px; 
+        color: #ffffff !important; /* Mudei para BRANCO para aparecer no fundo escuro */
+        text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Sombra para leitura perfeita */
+    }
     
     /* === OUTROS === */
     .stProgress > div > div > div > div { background-color: #58cc02; }
