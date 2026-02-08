@@ -208,7 +208,7 @@ AVATARS = [
     "💉", "🦠", "🧬", "🩺", "🚑", "🏥", "🐧", "🦈", "🦅", "🐺"
 ]
 
-# --- DADOS DO CRONOGRAMA COMPLETO ---
+# --- DADOS DO CRONOGRAMA ---
 RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 20/02/2026,Sex,1,Pediatria,Imunizações (Calendário),15 Questões + Eng. Reversa
 21/02/2026,Sáb,1,Medicina Preventiva,Vigilância em Saúde,30 Questões + Sprint Semanal
@@ -494,7 +494,7 @@ def init_db():
                 dt_obj = datetime.strptime(date_str, "%d/%m/%Y").date()
                 formatted_date = str(dt_obj)
             except:
-                formatted_date = str(date.today())
+                formatted_date = str(get_brazil_date()) # DATA CORRIGIDA
 
             row = [
                 i + 1, 
@@ -584,7 +584,7 @@ def save_chat_message(user, msg, avatar_data):
     new_msg = {
         "user": user,
         "msg": msg,
-        "time": datetime.now().strftime("%d/%m %H:%M"),
+        "time": get_brazil_time().strftime("%d/%m %H:%M"), # HORA CORRIGIDA
         "avatar": avatar_data
     }
     messages.append(new_msg)
@@ -676,7 +676,7 @@ with st.sidebar:
     else:
         st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
     
-    st.markdown(f"<div class='profile-name'>{current_user}</div>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center;'>Olá, {current_user}! 👋</h3>", unsafe_allow_html=True)
     
     if st.button("Sair", use_container_width=True):
         del st.session_state["logged_user"]
@@ -691,8 +691,7 @@ with st.sidebar:
     st.markdown(f"""<div class="xp-box"><div style="font-size: 14px; color: #aaa;">💎 XP Total</div><div class="xp-val">{total_xp}</div></div>""", unsafe_allow_html=True)
     st.divider()
 
-    # 3. CHAT (FIXO NO FIM)
-    # Container com altura fixa para não esconder o input
+    # 3. CHAT
     st.markdown("### 💬 Chat da Turma")
     chat_container = st.container(height=200)
     messages = load_chat()
@@ -720,7 +719,7 @@ with st.sidebar:
     if st.button("🔄 Atualizar Chat", use_container_width=True): st.rerun()
 
 # --- DASHBOARD ---
-today = date.today()
+today = get_brazil_date() # DATA CORRIGIDA
 df['dt_obj'] = pd.to_datetime(df['Data_Alvo']).dt.date
 future_tasks = df[df['dt_obj'] >= today]
 if df['dt_obj'].min() > today: status_cronograma = "Pré-Edital"
@@ -767,7 +766,7 @@ with tab1:
                 idx = df[df["ID"] == row["ID"]].index[0]
                 status = row[f"{current_user}_Status"]
                 try: d_alvo = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date(); d_br = d_alvo.strftime("%d/%m")
-                except: d_alvo, d_br = date.today(), "--/--"
+                except: d_alvo, d_br = get_brazil_date(), "--/--" # DATA CORRIGIDA
                 
                 bg, border = ("#e6fffa", "#58cc02") if status else ("#fff5d1", "#ffc800") if today > d_alvo else ("#ffffff", "#e5e5e5")
                 lbl, ico, clr = ("FEITO", "✅", "#58cc02") if status else ("ATRASADO", "⚠️", "#d4a000") if today > d_alvo else ("PRAZO", "📅", "#afafaf")
@@ -821,7 +820,7 @@ with tab1:
                         lbl_b = "Entregar" if today > d_alvo else "Concluir"
                         if st.button(lbl_b, key=f"c{row['ID']}", type=btn_t):
                             df.at[idx, f"{current_user}_Status"] = True
-                            df.at[idx, f"{current_user}_Date"] = str(date.today())
+                            df.at[idx, f"{current_user}_Date"] = str(get_brazil_date()) # DATA CORRIGIDA
                             save_data(df); st.rerun()
                 st.divider()
 
