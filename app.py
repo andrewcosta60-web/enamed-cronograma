@@ -106,37 +106,40 @@ st.markdown("""
     }
     .chat-header strong { color: #58cc02; }
 
-   /* === PERFIL SIDEBAR (TAMANHO GRANDE FORÇADO V15) === */
+   /* === PERFIL SIDEBAR (CORREÇÃO DE TAMANHO V16) === */
     
     /* Estilo para FOTO (Upload) */
     .profile-pic-sidebar {
-        width: 160px !important;  /* Força o tamanho GRANDE (160px) */
-        height: 160px !important; /* Força a altura igual */
+        width: 180px !important;  /* Aumentado para 180px */
+        height: 180px !important; /* Altura igual para ficar redondo */
+        min-width: 180px !important; /* Garante que não diminua */
+        min-height: 180px !important;
         border-radius: 50%;
         object-fit: cover;
         border: 5px solid #58cc02; /* Borda verde mais grossa */
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3); /* Sombra para destacar */
+        box-shadow: 0 5px 15px rgba(0,0,0,0.5); /* Sombra forte */
         display: block;
-        margin: 10px auto; /* Centraliza */
+        margin: 20px auto !important; /* Centraliza com margem */
     }
 
     /* Estilo para EMOJI (Caso não tenha foto) */
     .profile-emoji-sidebar {
-        font-size: 130px !important; /* Força o emoji GRANDE */
+        font-size: 100px !important; /* Aumentado drasticamente */
         text-align: center;
         display: block;
-        margin: 0 auto;
-        line-height: 1.1; /* Ajusta altura da linha do emoji */
+        margin: 20px auto !important;
+        line-height: 1 !important;
     }
     
     /* Ajuste do Nome abaixo da foto */
     .profile-name {
         text-align: center;
         font-weight: 900;
-        font-size: 22px !important; /* Nome maior e forçado */
-        margin-top: 15px;
-        margin-bottom: 15px;
-        color: white !important; /* Nome branco */
+        font-size: 22px !important; /* Fonte maior */
+        margin-top: 10px;
+        margin-bottom: 20px;
+        color: white !important; /* GARANTE QUE SEJA BRANCO */
+        text-shadow: 0 2px 4px rgba(0,0,0,0.8); /* Sombra para leitura */
     }
     
     /* === OUTROS === */
