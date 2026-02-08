@@ -106,74 +106,54 @@ st.markdown("""
     }
     .chat-header strong { color: #58cc02; }
 
-   /* === PERFIL SIDEBAR (V18 - MENOR E MAIS ALTO) === */
+   /* === PERFIL SIDEBAR (TAMANHO GIGANTE FORÇADO V17) === */
     
-    /* Container para centralizar tudo - Margens reduzidas */
+    /* Container para centralizar tudo */
     .profile-container-custom {
         display: flex;
         justify-content: center;
         align-items: center;
         width: 100%;
-        margin-top: 5px !important; /* Subiu o topo */
-        margin-bottom: 10px !important; /* Reduziu espaço abaixo */
+        margin-top: 20px;
+        margin-bottom: 20px;
     }
 
-    /* FOTO: Tamanho reduzido para 160px (antes era 200px) */
+    /* FOTO: Tamanho fixo e mandatório */
     .profile-img-fixed {
-        width: 160px !important;
-        height: 160px !important;
-        min-width: 160px !important;
-        max-width: 160px !important;
+        width: 200px !important;
+        height: 200px !important;
+        min-width: 200px !important; /* Impede o Streamlit de diminuir */
+        max-width: 200px !important;
         border-radius: 50%;
         object-fit: cover;
-        border: 4px solid #58cc02;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        border: 5px solid #58cc02;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     }
 
-    /* EMOJI */
+    /* EMOJI: Tamanho gigante */
     .profile-emoji-fixed {
-        font-size: 100px !important;
+        font-size: 130px !important;
         line-height: 1 !important;
         text-align: center;
-        margin-top: 10px;
     }
     
-    /* NOME: Mais próximo da foto */
+    /* NOME: Branco e grande */
     .profile-name {
         text-align: center;
         font-weight: 900;
-        font-size: 22px !important;
+        font-size: 26px !important;
         color: white !important;
         text-shadow: 0 2px 5px rgba(0,0,0,0.8);
-        margin-bottom: 10px !important; /* Menos espaço para o botão sair */
-        margin-top: 5px !important;
+        margin-bottom: 20px;
     }
     
-    /* XP Box - Mais compacta */
-    .xp-box {
-        background-color: #262730; border: 1px solid #444; border-radius: 10px;
-        padding: 5px; text-align: center; margin-top: 0px; margin-bottom: 10px;
-    }
-    .xp-val { font-size: 22px; font-weight: bold; color: #58cc02; line-height: 1.2; }
-
-    /* === BOTÃO DE ATUALIZAR AZUL (Personalizado) === */
-    /* Afeta apenas o botão dentro da coluna específica do chat */
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
-        border: 1px solid #0099ff !important;
-        background-color: rgba(0, 153, 255, 0.1) !important;
-        color: #0099ff !important;
-        font-size: 16px !important;
-        padding: 2px 8px !important;
-        height: auto !important;
-    }
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
-        background-color: #0099ff !important;
-        color: white !important;
-    }
-
-    /* Outros ajustes gerais */
+    /* === OUTROS === */
     .stProgress > div > div > div > div { background-color: #58cc02; }
-    .dash-card { background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px; text-align: center; border: 1px solid #dcdcdc; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+    .dash-card {
+        background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px;
+        text-align: center; border: 1px solid #dcdcdc; height: 100%;
+        display: flex; flex-direction: column; justify-content: center;
+    }
     .dash-label { font-size: 11px !important; font-weight: bold !important; color: #333 !important; text-transform: uppercase; }
     .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
     .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
@@ -181,8 +161,8 @@ st.markdown("""
     .saved-link-item a { text-decoration: none; color: #0068c9; font-weight: bold; }
     .delete-confirm-box { background-color: #ffe6e6; border: 1px solid #ffcccc; padding: 5px; border-radius: 5px; text-align: center; font-size: 12px; margin-bottom: 5px;}
     .warning-box { background-color: #fff3e0; border-left: 5px solid #ff9800; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
-    .info-box { background-color: #e3f2fd; border-left: 5px solid #2196f3; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
     </style>
+""", unsafe_allow_html=True)
 
 # --- CONFIGURAÇÕES ---
 CSV_FILE = "enamed_db_v4.csv"
@@ -660,50 +640,59 @@ if "logged_user" not in st.session_state:
 
 current_user = st.session_state["logged_user"]
 
-# --- SIDEBAR (PERFIL + XP + CHAT OTIMIZADO) ---
+# --- SIDEBAR (PERFIL + XP + CHAT) ---
 with st.sidebar:
-    # 1. PERFIL (COMPACTO)
+    # 1. PERFIL (HTML PURO PARA FORÇAR TAMANHO)
     if current_user in profiles:
         profile_data = profiles[current_user]
+        
+        # Verifica se é Imagem (Base64 longo) ou Emoji (Texto curto)
         if len(profile_data) > 20: 
-            st.markdown(f"""<div class="profile-container-custom"><img class="profile-img-fixed" src="data:image/png;base64,{profile_data}"></div>""", unsafe_allow_html=True)
+            # Renderiza FOTO com a classe 'profile-img-fixed'
+            st.markdown(f"""
+            <div class="profile-container-custom">
+                <img class="profile-img-fixed" src="data:image/png;base64,{profile_data}">
+            </div>
+            """, unsafe_allow_html=True)
         else: 
-            st.markdown(f"""<div class="profile-container-custom"><div class="profile-emoji-fixed">{profile_data}</div></div>""", unsafe_allow_html=True)
+            # Renderiza EMOJI com a classe 'profile-emoji-fixed'
+            st.markdown(f"""
+            <div class="profile-container-custom">
+                <div class="profile-emoji-fixed">{profile_data}</div>
+            </div>
+            """, unsafe_allow_html=True)
     else:
-        st.markdown("<div style='text-align: center; font-size: 80px; margin-bottom: 10px;'>🏥</div>", unsafe_allow_html=True)
+        # Ícone padrão se não tiver login
+        st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
     
+    # Nome do Usuário
     st.markdown(f"<div class='profile-name'>{current_user}</div>", unsafe_allow_html=True)
     
     if st.button("Sair", type="primary", use_container_width=True):
         del st.session_state["logged_user"]
         st.rerun()
     
-    # 2. XP (COMPACTO)
+    # 2. XP
     total_xp = 0
     for idx, row in df.iterrows():
         if f"{current_user}_Date" in df.columns:
             total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
     
-    st.markdown(f"""<div class="xp-box"><div style="font-size: 12px; color: #aaa;">💎 XP ACUMULADO</div><div class="xp-val">{total_xp}</div></div>""", unsafe_allow_html=True)
-    
+    st.markdown(f"""<div class="xp-box"><div style="font-size: 14px; color: #aaa;">💎 XP Total</div><div class="xp-val">{total_xp}</div></div>""", unsafe_allow_html=True)
     st.divider()
 
-    # 3. CHAT (ECONOMIA DE ESPAÇO)
-    # Título e Botão de Atualizar na MESMA linha
-    col_head, col_btn = st.columns([0.75, 0.25], vertical_alignment="center")
-    with col_head:
-        st.markdown("### 💬 Chat")
-    with col_btn:
-        if st.button("🔄", help="Atualizar mensagens", type="secondary"):
-            st.rerun()
-
-    chat_container = st.container(height=280) # Aumentei um pouco pois ganhamos espaço
+    # 3. CHAT (FIXO NO FIM - CORRIGIDO ALINHAMENTO E LIXEIRA)
+    st.markdown("### 💬 Chat da Turma")
+    chat_container = st.container(height=250)
     messages = load_chat()
     
     with chat_container:
-        if not messages: st.caption("Nenhuma mensagem.")
+        if not messages: st.caption("Nenhuma mensagem ainda.")
         for i, m in enumerate(messages):
+            # Layout: Coluna 0.85 (Texto) | Coluna 0.15 (Botão)
+            # vertical_alignment="center" garante o alinhamento
             cols_chat = st.columns([0.85, 0.15], gap="small", vertical_alignment="center")
+            
             with cols_chat[0]:
                 av_html = ""
                 if len(m['avatar']) > 20: 
@@ -723,6 +712,7 @@ with st.sidebar:
             with cols_chat[1]:
                 if m['user'] == current_user:
                     msg_id = m.get("id", "legacy")
+                    # Botão secundário (invisível por CSS)
                     if st.button("🗑️", key=f"del_{i}_{msg_id}", type="secondary", help="Excluir"):
                         if msg_id == "legacy":
                             messages.pop(i)
@@ -735,6 +725,9 @@ with st.sidebar:
         u_av = profiles.get(current_user, "👤")
         save_chat_message(current_user, prompt, u_av)
         st.rerun()
+        
+    # Botão de atualizar deve ser primário para não ser invisível
+    if st.button("🔄 Atualizar Chat", type="primary", use_container_width=True): st.rerun()
 
 # --- DASHBOARD ---
 today = get_brazil_date() 
