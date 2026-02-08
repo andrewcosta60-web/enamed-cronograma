@@ -8,18 +8,16 @@ import csv
 import json
 import base64
 from PIL import Image
-import pytz # Biblioteca de Fuso Horário
+import pytz # Fuso Horário
+import uuid # Para ID único das mensagens
 
 # --- CONFIGURAÇÃO DE FUSO HORÁRIO (BRASÍLIA) ---
-# Define o fuso horário oficial
 TZ_BRAZIL = pytz.timezone('America/Sao_Paulo')
 
 def get_brazil_time():
-    """Retorna a data e hora atuais em Brasília"""
     return datetime.now(TZ_BRAZIL)
 
 def get_brazil_date():
-    """Retorna apenas a data atual em Brasília"""
     return get_brazil_time().date()
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
@@ -57,6 +55,7 @@ st.markdown("""
     button[kind="secondary"] {
         border-radius: 12px !important;
         font-weight: bold !important;
+        border: 1px solid #ddd !important;
     }
 
     /* === CHAT ESTILO === */
@@ -101,6 +100,15 @@ st.markdown("""
     .chat-header strong {
         color: #58cc02;
     }
+    
+    /* Botão de excluir mensagem pequeno */
+    .stButton.delete-msg-btn button {
+        padding: 0px 5px !important;
+        font-size: 10px !important;
+        height: 25px !important;
+        line-height: 1 !important;
+        border: none !important;
+    }
 
     /* === PERFIL SIDEBAR === */
     .profile-pic-sidebar {
@@ -127,7 +135,7 @@ st.markdown("""
         margin-bottom: 5px;
     }
     
-    /* XP Box Compacta */
+    /* XP Box */
     .xp-box {
         background-color: #262730;
         border: 1px solid #444;
@@ -156,7 +164,7 @@ st.markdown("""
     }
     .saved-link-item a { text-decoration: none; color: #0068c9; font-weight: bold; }
     
-    /* Outros Estilos */
+    /* Outros */
     .stProgress > div > div > div > div { background-color: #58cc02; }
     .dash-card {
         background-color: #f0f2f6 !important;
@@ -173,24 +181,8 @@ st.markdown("""
     .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
     .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
     .delete-confirm-box { background-color: #ffe6e6; border: 1px solid #ffcccc; padding: 5px; border-radius: 5px; text-align: center; font-size: 12px; margin-bottom: 5px;}
-    
-    /* Tutorial Boxes */
-    .warning-box {
-        background-color: #fff3e0;
-        border-left: 5px solid #ff9800;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 10px;
-        color: black;
-    }
-    .info-box {
-        background-color: #e3f2fd;
-        border-left: 5px solid #2196f3;
-        padding: 15px;
-        border-radius: 5px;
-        margin-bottom: 10px;
-        color: black;
-    }
+    .warning-box { background-color: #fff3e0; border-left: 5px solid #ff9800; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
+    .info-box { background-color: #e3f2fd; border-left: 5px solid #2196f3; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
     </style>
 """, unsafe_allow_html=True)
 
@@ -582,6 +574,7 @@ def load_chat():
 def save_chat_message(user, msg, avatar_data):
     messages = load_chat()
     new_msg = {
+        "id": str(uuid.uuid4()), # ID ÚNICO
         "user": user,
         "msg": msg,
         "time": get_brazil_time().strftime("%d/%m %H:%M"), # HORA CORRIGIDA
@@ -589,6 +582,12 @@ def save_chat_message(user, msg, avatar_data):
     }
     messages.append(new_msg)
     if len(messages) > 50: messages = messages[-50:] # Limita histórico
+    with open(CHAT_FILE, "w") as f:
+        json.dump(messages, f)
+
+def delete_chat_message(msg_id):
+    messages = load_chat()
+    messages = [m for m in messages if m.get("id") != msg_id]
     with open(CHAT_FILE, "w") as f:
         json.dump(messages, f)
 
@@ -676,7 +675,7 @@ with st.sidebar:
     else:
         st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
     
-    st.markdown(f"<h3 style='text-align: center;'>Olá, {current_user}! 👋</h3>", unsafe_allow_html=True)
+    st.markdown(f"<div class='profile-name'>{current_user}</div>", unsafe_allow_html=True)
     
     if st.button("Sair", use_container_width=True):
         del st.session_state["logged_user"]
@@ -691,25 +690,38 @@ with st.sidebar:
     st.markdown(f"""<div class="xp-box"><div style="font-size: 14px; color: #aaa;">💎 XP Total</div><div class="xp-val">{total_xp}</div></div>""", unsafe_allow_html=True)
     st.divider()
 
-    # 3. CHAT
+    # 3. CHAT (FIXO NO FIM)
     st.markdown("### 💬 Chat da Turma")
     chat_container = st.container(height=200)
     messages = load_chat()
     
     with chat_container:
         if not messages: st.caption("Nenhuma mensagem ainda.")
-        for m in messages:
-            av_html = ""
-            if len(m['avatar']) > 20: av_html = f'<img class="chat-avatar-img" src="data:image/png;base64,{m["avatar"]}">'
-            else: av_html = f'<div class="chat-avatar-emoji">{m["avatar"]}</div>'
-            st.markdown(f"""
-            <div class="chat-msg-container">
-                {av_html}
-                <div class="chat-bubble">
-                    <div class="chat-header"><strong>{m['user']}</strong> <span>{m['time']}</span></div>
-                    {m['msg']}
-                </div>
-            </div>""", unsafe_allow_html=True)
+        for i, m in enumerate(messages):
+            # Layout: Mensagem (Esq) | Botão Excluir (Dir - só se for dono)
+            cols_chat = st.columns([8, 1])
+            
+            with cols_chat[0]:
+                av_html = ""
+                if len(m['avatar']) > 20: av_html = f'<img class="chat-avatar-img" src="data:image/png;base64,{m["avatar"]}">'
+                else: av_html = f'<div class="chat-avatar-emoji">{m["avatar"]}</div>'
+                st.markdown(f"""
+                <div class="chat-msg-container">
+                    {av_html}
+                    <div class="chat-bubble">
+                        <div class="chat-header"><strong>{m['user']}</strong> <span>{m['time']}</span></div>
+                        {m['msg']}
+                    </div>
+                </div>""", unsafe_allow_html=True)
+            
+            with cols_chat[1]:
+                # Só mostra lixeira se a mensagem for do usuário atual
+                if m['user'] == current_user:
+                    # Usar um ID único ou fallback para index se mensagem antiga
+                    msg_id = m.get("id", i) 
+                    if st.button("🗑️", key=f"del_msg_{msg_id}", help="Apagar mensagem"):
+                        delete_chat_message(msg_id)
+                        st.rerun()
             
     if prompt := st.chat_input("Mensagem...", key="sidebar_chat"):
         u_av = profiles.get(current_user, "👤")
