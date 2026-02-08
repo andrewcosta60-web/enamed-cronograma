@@ -434,7 +434,6 @@ RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 10/12/2026,Qui,42,Pediatria,Tuberculose,15 Questões + Eng. Reversa
 11/12/2026,Sex,43,Pediatria,Distúrbios Respiratórios,15 Questões + Eng. Reversa
 """
-
 # --- FUNÇÕES ---
 
 def get_users_from_df(df):
