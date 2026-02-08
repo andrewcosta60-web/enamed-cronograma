@@ -106,31 +106,37 @@ st.markdown("""
     }
     .chat-header strong { color: #58cc02; }
 
-   /* === PERFIL SIDEBAR (ATUALIZADO V14) === */
+   /* === PERFIL SIDEBAR (TAMANHO GRANDE FORÇADO V15) === */
+    
+    /* Estilo para FOTO (Upload) */
     .profile-pic-sidebar {
-        width: 250px; /* Aumentei de 100px para 150px */
-        height: 250px;
+        width: 160px !important;  /* Força o tamanho GRANDE (160px) */
+        height: 160px !important; /* Força a altura igual */
         border-radius: 50%;
         object-fit: cover;
-        border: 4px solid #58cc02;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.3); /* Sombra mais forte */
+        border: 5px solid #58cc02; /* Borda verde mais grossa */
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3); /* Sombra para destacar */
+        display: block;
+        margin: 10px auto; /* Centraliza */
+    }
+
+    /* Estilo para EMOJI (Caso não tenha foto) */
+    .profile-emoji-sidebar {
+        font-size: 130px !important; /* Força o emoji GRANDE */
+        text-align: center;
         display: block;
         margin: 0 auto;
+        line-height: 1.1; /* Ajusta altura da linha do emoji */
     }
-    .profile-emoji-sidebar { 
-        font-size: 110px; /* Aumentei de 70px para 110px */
-        text-align: center; 
-        display: block; 
-        margin: 0 auto; 
-    }
-    .profile-name { 
-        text-align: center; 
-        font-weight: 900; 
-        font-size: 24px; /* Letra maior */
-        margin-top: 15px; 
-        margin-bottom: 10px; 
-        color: #ffffff !important; /* Mudei para BRANCO para aparecer no fundo escuro */
-        text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Sombra para leitura perfeita */
+    
+    /* Ajuste do Nome abaixo da foto */
+    .profile-name {
+        text-align: center;
+        font-weight: 900;
+        font-size: 22px !important; /* Nome maior e forçado */
+        margin-top: 15px;
+        margin-bottom: 15px;
+        color: white !important; /* Nome branco */
     }
     
     /* === OUTROS === */
