@@ -640,59 +640,50 @@ if "logged_user" not in st.session_state:
 
 current_user = st.session_state["logged_user"]
 
-# --- SIDEBAR (PERFIL + XP + CHAT) ---
+# --- SIDEBAR (PERFIL + XP + CHAT OTIMIZADO) ---
 with st.sidebar:
-    # 1. PERFIL (HTML PURO PARA FORÇAR TAMANHO)
+    # 1. PERFIL (COMPACTO)
     if current_user in profiles:
         profile_data = profiles[current_user]
-        
-        # Verifica se é Imagem (Base64 longo) ou Emoji (Texto curto)
         if len(profile_data) > 20: 
-            # Renderiza FOTO com a classe 'profile-img-fixed'
-            st.markdown(f"""
-            <div class="profile-container-custom">
-                <img class="profile-img-fixed" src="data:image/png;base64,{profile_data}">
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"""<div class="profile-container-custom"><img class="profile-img-fixed" src="data:image/png;base64,{profile_data}"></div>""", unsafe_allow_html=True)
         else: 
-            # Renderiza EMOJI com a classe 'profile-emoji-fixed'
-            st.markdown(f"""
-            <div class="profile-container-custom">
-                <div class="profile-emoji-fixed">{profile_data}</div>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown(f"""<div class="profile-container-custom"><div class="profile-emoji-fixed">{profile_data}</div></div>""", unsafe_allow_html=True)
     else:
-        # Ícone padrão se não tiver login
-        st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
+        st.markdown("<div style='text-align: center; font-size: 80px; margin-bottom: 10px;'>🏥</div>", unsafe_allow_html=True)
     
-    # Nome do Usuário
     st.markdown(f"<div class='profile-name'>{current_user}</div>", unsafe_allow_html=True)
     
     if st.button("Sair", type="primary", use_container_width=True):
         del st.session_state["logged_user"]
         st.rerun()
     
-    # 2. XP
+    # 2. XP (COMPACTO)
     total_xp = 0
     for idx, row in df.iterrows():
         if f"{current_user}_Date" in df.columns:
             total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
     
-    st.markdown(f"""<div class="xp-box"><div style="font-size: 14px; color: #aaa;">💎 XP Total</div><div class="xp-val">{total_xp}</div></div>""", unsafe_allow_html=True)
+    st.markdown(f"""<div class="xp-box"><div style="font-size: 12px; color: #aaa;">💎 XP ACUMULADO</div><div class="xp-val">{total_xp}</div></div>""", unsafe_allow_html=True)
+    
     st.divider()
 
-    # 3. CHAT (FIXO NO FIM - CORRIGIDO ALINHAMENTO E LIXEIRA)
-    st.markdown("### 💬 Chat da Turma")
-    chat_container = st.container(height=250)
+    # 3. CHAT (ECONOMIA DE ESPAÇO)
+    # Título e Botão de Atualizar na MESMA linha
+    col_head, col_btn = st.columns([0.75, 0.25], vertical_alignment="center")
+    with col_head:
+        st.markdown("### 💬 Chat")
+    with col_btn:
+        if st.button("🔄", help="Atualizar mensagens", type="secondary"):
+            st.rerun()
+
+    chat_container = st.container(height=280) # Aumentei um pouco pois ganhamos espaço
     messages = load_chat()
     
     with chat_container:
-        if not messages: st.caption("Nenhuma mensagem ainda.")
+        if not messages: st.caption("Nenhuma mensagem.")
         for i, m in enumerate(messages):
-            # Layout: Coluna 0.85 (Texto) | Coluna 0.15 (Botão)
-            # vertical_alignment="center" garante o alinhamento
             cols_chat = st.columns([0.85, 0.15], gap="small", vertical_alignment="center")
-            
             with cols_chat[0]:
                 av_html = ""
                 if len(m['avatar']) > 20: 
@@ -712,7 +703,6 @@ with st.sidebar:
             with cols_chat[1]:
                 if m['user'] == current_user:
                     msg_id = m.get("id", "legacy")
-                    # Botão secundário (invisível por CSS)
                     if st.button("🗑️", key=f"del_{i}_{msg_id}", type="secondary", help="Excluir"):
                         if msg_id == "legacy":
                             messages.pop(i)
@@ -725,9 +715,6 @@ with st.sidebar:
         u_av = profiles.get(current_user, "👤")
         save_chat_message(current_user, prompt, u_av)
         st.rerun()
-        
-    # Botão de atualizar deve ser primário para não ser invisível
-    if st.button("🔄 Atualizar Chat", type="primary", use_container_width=True): st.rerun()
 
 # --- DASHBOARD ---
 today = get_brazil_date() 
