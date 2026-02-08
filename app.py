@@ -106,54 +106,74 @@ st.markdown("""
     }
     .chat-header strong { color: #58cc02; }
 
-   /* === PERFIL SIDEBAR (TAMANHO GIGANTE FORÇADO V17) === */
+   /* === PERFIL SIDEBAR (V18 - MENOR E MAIS ALTO) === */
     
-    /* Container para centralizar tudo */
+    /* Container para centralizar tudo - Margens reduzidas */
     .profile-container-custom {
         display: flex;
         justify-content: center;
         align-items: center;
         width: 100%;
-        margin-top: 20px;
-        margin-bottom: 20px;
+        margin-top: 5px !important; /* Subiu o topo */
+        margin-bottom: 10px !important; /* Reduziu espaço abaixo */
     }
 
-    /* FOTO: Tamanho fixo e mandatório */
+    /* FOTO: Tamanho reduzido para 160px (antes era 200px) */
     .profile-img-fixed {
-        width: 200px !important;
-        height: 200px !important;
-        min-width: 200px !important; /* Impede o Streamlit de diminuir */
-        max-width: 200px !important;
+        width: 160px !important;
+        height: 160px !important;
+        min-width: 160px !important;
+        max-width: 160px !important;
         border-radius: 50%;
         object-fit: cover;
-        border: 5px solid #58cc02;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        border: 4px solid #58cc02;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
 
-    /* EMOJI: Tamanho gigante */
+    /* EMOJI */
     .profile-emoji-fixed {
-        font-size: 130px !important;
+        font-size: 100px !important;
         line-height: 1 !important;
         text-align: center;
+        margin-top: 10px;
     }
     
-    /* NOME: Branco e grande */
+    /* NOME: Mais próximo da foto */
     .profile-name {
         text-align: center;
         font-weight: 900;
-        font-size: 26px !important;
+        font-size: 22px !important;
         color: white !important;
         text-shadow: 0 2px 5px rgba(0,0,0,0.8);
-        margin-bottom: 20px;
+        margin-bottom: 10px !important; /* Menos espaço para o botão sair */
+        margin-top: 5px !important;
     }
     
-    /* === OUTROS === */
-    .stProgress > div > div > div > div { background-color: #58cc02; }
-    .dash-card {
-        background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px;
-        text-align: center; border: 1px solid #dcdcdc; height: 100%;
-        display: flex; flex-direction: column; justify-content: center;
+    /* XP Box - Mais compacta */
+    .xp-box {
+        background-color: #262730; border: 1px solid #444; border-radius: 10px;
+        padding: 5px; text-align: center; margin-top: 0px; margin-bottom: 10px;
     }
+    .xp-val { font-size: 22px; font-weight: bold; color: #58cc02; line-height: 1.2; }
+
+    /* === BOTÃO DE ATUALIZAR AZUL (Personalizado) === */
+    /* Afeta apenas o botão dentro da coluna específica do chat */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        border: 1px solid #0099ff !important;
+        background-color: rgba(0, 153, 255, 0.1) !important;
+        color: #0099ff !important;
+        font-size: 16px !important;
+        padding: 2px 8px !important;
+        height: auto !important;
+    }
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+        background-color: #0099ff !important;
+        color: white !important;
+    }
+
+    /* Outros ajustes gerais */
+    .stProgress > div > div > div > div { background-color: #58cc02; }
+    .dash-card { background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px; text-align: center; border: 1px solid #dcdcdc; height: 100%; display: flex; flex-direction: column; justify-content: center; }
     .dash-label { font-size: 11px !important; font-weight: bold !important; color: #333 !important; text-transform: uppercase; }
     .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
     .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
@@ -161,9 +181,9 @@ st.markdown("""
     .saved-link-item a { text-decoration: none; color: #0068c9; font-weight: bold; }
     .delete-confirm-box { background-color: #ffe6e6; border: 1px solid #ffcccc; padding: 5px; border-radius: 5px; text-align: center; font-size: 12px; margin-bottom: 5px;}
     .warning-box { background-color: #fff3e0; border-left: 5px solid #ff9800; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
+    .info-box { background-color: #e3f2fd; border-left: 5px solid #2196f3; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
     </style>
-""", unsafe_allow_html=True)
-
+    
 # --- CONFIGURAÇÕES ---
 CSV_FILE = "enamed_db_v4.csv"
 LINK_FILE = "drive_link.txt" 
