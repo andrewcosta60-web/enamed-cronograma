@@ -108,8 +108,8 @@ st.markdown("""
 
    /* === PERFIL SIDEBAR (ATUALIZADO V14) === */
     .profile-pic-sidebar {
-        width: 150px; /* Aumentei de 100px para 150px */
-        height: 150px;
+        width: 250px; /* Aumentei de 100px para 150px */
+        height: 250px;
         border-radius: 50%;
         object-fit: cover;
         border: 4px solid #58cc02;
