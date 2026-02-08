@@ -23,7 +23,36 @@ st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="wide")
 
 # --- CSS GLOBAL ---
 st.markdown("""
-    <style>
+    </* === CORREÇÃO DO CHAT (BOTÃO INVISÍVEL E ALINHADO) === */
+    
+    /* Alinha verticalmente os itens do chat (mensagem e botão) */
+    [data-testid="column"] {
+        display: flex;
+        align-items: center !important; /* Centraliza verticalmente */
+        height: 100%;
+    }
+
+    /* Estilo Específico para o Botão de Lixeira (Invisível) */
+    /* Remove bordas e fundo apenas dos botões secundários pequenos do chat */
+    div[data-testid="stVerticalBlock"] button[kind="secondary"] {
+        border: none !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+        color: #999 !important; /* Cor do ícone cinza discreto */
+        padding: 0px !important;
+        transition: color 0.3s;
+    }
+    
+    /* Ao passar o mouse na lixeira, fica vermelha */
+    div[data-testid="stVerticalBlock"] button[kind="secondary"]:hover {
+        color: #ff4b4b !important;
+        background-color: transparent !important;
+    }
+    
+    /* Ajuste fino da bolha do chat */
+    .chat-bubble {
+        margin-top: 5px; /* Pequeno ajuste para alinhar com o botão */
+    }>
     @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
     
     html, body, [class*="css"] {
