@@ -8,6 +8,19 @@ import csv
 import json
 import base64
 from PIL import Image
+import pytz # Biblioteca de Fuso Horário
+
+# --- CONFIGURAÇÃO DE FUSO HORÁRIO (BRASÍLIA) ---
+# Define o fuso horário oficial
+TZ_BRAZIL = pytz.timezone('America/Sao_Paulo')
+
+def get_brazil_time():
+    """Retorna a data e hora atuais em Brasília"""
+    return datetime.now(TZ_BRAZIL)
+
+def get_brazil_date():
+    """Retorna apenas a data atual em Brasília"""
+    return get_brazil_time().date()
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="wide") 
@@ -470,7 +483,7 @@ def init_db():
             
         df = pd.DataFrame(columns=cols)
         
-        # Parse do CSV Raw
+        # Parse do CSV Raw (FULL)
         f = io.StringIO(RAW_SCHEDULE)
         reader = csv.DictReader(f)
         
@@ -663,7 +676,7 @@ with st.sidebar:
     else:
         st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
     
-    st.markdown(f"<h3 style='text-align: center;'>Olá, {current_user}! 👋</h3>", unsafe_allow_html=True)
+    st.markdown(f"<div class='profile-name'>{current_user}</div>", unsafe_allow_html=True)
     
     if st.button("Sair", use_container_width=True):
         del st.session_state["logged_user"]
@@ -678,9 +691,10 @@ with st.sidebar:
     st.markdown(f"""<div class="xp-box"><div style="font-size: 14px; color: #aaa;">💎 XP Total</div><div class="xp-val">{total_xp}</div></div>""", unsafe_allow_html=True)
     st.divider()
 
-    # 3. CHAT
+    # 3. CHAT (FIXO NO FIM)
+    # Container com altura fixa para não esconder o input
     st.markdown("### 💬 Chat da Turma")
-    chat_container = st.container(height=200) # ALTURA REDUZIDA AQUI
+    chat_container = st.container(height=200)
     messages = load_chat()
     
     with chat_container:
