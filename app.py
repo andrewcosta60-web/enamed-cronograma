@@ -106,40 +106,45 @@ st.markdown("""
     }
     .chat-header strong { color: #58cc02; }
 
-   /* === PERFIL SIDEBAR (CORREÇÃO DE TAMANHO V16) === */
+   /* === PERFIL SIDEBAR (TAMANHO GIGANTE FORÇADO V17) === */
     
-    /* Estilo para FOTO (Upload) */
-    .profile-pic-sidebar {
-        width: 180px !important;  /* Aumentado para 180px */
-        height: 180px !important; /* Altura igual para ficar redondo */
-        min-width: 180px !important; /* Garante que não diminua */
-        min-height: 180px !important;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 5px solid #58cc02; /* Borda verde mais grossa */
-        box-shadow: 0 5px 15px rgba(0,0,0,0.5); /* Sombra forte */
-        display: block;
-        margin: 20px auto !important; /* Centraliza com margem */
+    /* Container para centralizar tudo */
+    .profile-container-custom {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-top: 20px;
+        margin-bottom: 20px;
     }
 
-    /* Estilo para EMOJI (Caso não tenha foto) */
-    .profile-emoji-sidebar {
-        font-size: 100px !important; /* Aumentado drasticamente */
-        text-align: center;
-        display: block;
-        margin: 20px auto !important;
+    /* FOTO: Tamanho fixo e mandatório */
+    .profile-img-fixed {
+        width: 200px !important;
+        height: 200px !important;
+        min-width: 200px !important; /* Impede o Streamlit de diminuir */
+        max-width: 200px !important;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 5px solid #58cc02;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    }
+
+    /* EMOJI: Tamanho gigante */
+    .profile-emoji-fixed {
+        font-size: 130px !important;
         line-height: 1 !important;
+        text-align: center;
     }
     
-    /* Ajuste do Nome abaixo da foto */
+    /* NOME: Branco e grande */
     .profile-name {
         text-align: center;
         font-weight: 900;
-        font-size: 22px !important; /* Fonte maior */
-        margin-top: 10px;
+        font-size: 26px !important;
+        color: white !important;
+        text-shadow: 0 2px 5px rgba(0,0,0,0.8);
         margin-bottom: 20px;
-        color: white !important; /* GARANTE QUE SEJA BRANCO */
-        text-shadow: 0 2px 4px rgba(0,0,0,0.8); /* Sombra para leitura */
     }
     
     /* === OUTROS === */
@@ -637,19 +642,32 @@ current_user = st.session_state["logged_user"]
 
 # --- SIDEBAR (PERFIL + XP + CHAT) ---
 with st.sidebar:
-    # 1. PERFIL
+    # 1. PERFIL (HTML PURO PARA FORÇAR TAMANHO)
     if current_user in profiles:
         profile_data = profiles[current_user]
+        
+        # Verifica se é Imagem (Base64 longo) ou Emoji (Texto curto)
         if len(profile_data) > 20: 
-            st.markdown(f"""<div class="profile-pic-container"><img class="profile-pic" src="data:image/png;base64,{profile_data}"></div>""", unsafe_allow_html=True)
-        else:
-            st.markdown(f"<div class='profile-emoji'>{profile_data}</div>", unsafe_allow_html=True)
+            # Renderiza FOTO com a classe 'profile-img-fixed'
+            st.markdown(f"""
+            <div class="profile-container-custom">
+                <img class="profile-img-fixed" src="data:image/png;base64,{profile_data}">
+            </div>
+            """, unsafe_allow_html=True)
+        else: 
+            # Renderiza EMOJI com a classe 'profile-emoji-fixed'
+            st.markdown(f"""
+            <div class="profile-container-custom">
+                <div class="profile-emoji-fixed">{profile_data}</div>
+            </div>
+            """, unsafe_allow_html=True)
     else:
+        # Ícone padrão se não tiver login
         st.markdown("<div style='text-align: center; font-size: 100px; margin-bottom: 20px;'>🏥</div>", unsafe_allow_html=True)
     
+    # Nome do Usuário
     st.markdown(f"<div class='profile-name'>{current_user}</div>", unsafe_allow_html=True)
     
-    # Botão Sair deve ser primário para não ser afetado pelo CSS "invisível"
     if st.button("Sair", type="primary", use_container_width=True):
         del st.session_state["logged_user"]
         st.rerun()
