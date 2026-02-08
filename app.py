@@ -49,36 +49,37 @@ st.markdown("""
     /* === CHAT ESTILO === */
     .chat-msg-container {
         display: flex;
-        gap: 10px;
-        margin-bottom: 10px;
+        gap: 8px;
+        margin-bottom: 8px;
         align-items: flex-start;
-        font-size: 13px;
+        font-size: 12px;
     }
     .chat-avatar-img {
-        width: 30px;
-        height: 30px;
+        width: 25px;
+        height: 25px;
         border-radius: 50%;
         object-fit: cover;
         border: 1px solid #ddd;
         flex-shrink: 0;
     }
     .chat-avatar-emoji {
-        width: 30px;
-        height: 30px;
-        font-size: 20px;
+        width: 25px;
+        height: 25px;
+        font-size: 18px;
         text-align: center;
         flex-shrink: 0;
     }
     .chat-bubble {
         background-color: #f0f2f6;
-        padding: 8px 12px;
+        padding: 6px 10px;
         border-radius: 10px;
         border-top-left-radius: 0px;
         flex-grow: 1;
         color: #333;
+        line-height: 1.3;
     }
     .chat-header {
-        font-size: 11px;
+        font-size: 10px;
         color: #888;
         margin-bottom: 2px;
         display: flex;
@@ -90,8 +91,8 @@ st.markdown("""
 
     /* === PERFIL SIDEBAR === */
     .profile-pic-sidebar {
-        width: 100px;
-        height: 100px;
+        width: 90px;
+        height: 90px;
         border-radius: 50%;
         object-fit: cover;
         border: 3px solid #58cc02;
@@ -100,7 +101,7 @@ st.markdown("""
         margin: 0 auto;
     }
     .profile-emoji-sidebar {
-        font-size: 70px;
+        font-size: 60px;
         text-align: center;
         display: block;
         margin: 0 auto;
@@ -108,8 +109,8 @@ st.markdown("""
     .profile-name {
         text-align: center;
         font-weight: bold;
-        font-size: 18px;
-        margin-top: 10px;
+        font-size: 16px;
+        margin-top: 5px;
         margin-bottom: 5px;
     }
     
@@ -118,13 +119,13 @@ st.markdown("""
         background-color: #262730;
         border: 1px solid #444;
         border-radius: 10px;
-        padding: 10px;
+        padding: 8px;
         text-align: center;
         margin-top: 5px;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
     }
     .xp-val {
-        font-size: 24px;
+        font-size: 20px;
         font-weight: bold;
         color: #58cc02;
     }
@@ -159,6 +160,24 @@ st.markdown("""
     .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
     .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
     .delete-confirm-box { background-color: #ffe6e6; border: 1px solid #ffcccc; padding: 5px; border-radius: 5px; text-align: center; font-size: 12px; margin-bottom: 5px;}
+    
+    /* Tutorial Boxes */
+    .warning-box {
+        background-color: #fff3e0;
+        border-left: 5px solid #ff9800;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        color: black;
+    }
+    .info-box {
+        background-color: #e3f2fd;
+        border-left: 5px solid #2196f3;
+        padding: 15px;
+        border-radius: 5px;
+        margin-bottom: 10px;
+        color: black;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -451,7 +470,7 @@ def init_db():
             
         df = pd.DataFrame(columns=cols)
         
-        # Parse do CSV Raw (FULL)
+        # Parse do CSV Raw
         f = io.StringIO(RAW_SCHEDULE)
         reader = csv.DictReader(f)
         
@@ -473,7 +492,7 @@ def init_db():
                 row_data['Tema'],
                 row_data['Meta_Diaria'],
                 "", # Link Vazio
-                "[]" # Lista vazia JSON
+                "[]" # Lista vazia em JSON
             ]
             for _ in DEFAULT_USERS: row.extend([False, None])
             initial_data.append(row)
@@ -661,7 +680,7 @@ with st.sidebar:
 
     # 3. CHAT
     st.markdown("### 💬 Chat da Turma")
-    chat_container = st.container(height=350)
+    chat_container = st.container(height=200) # ALTURA REDUZIDA AQUI
     messages = load_chat()
     
     with chat_container:
@@ -860,7 +879,43 @@ with tab4:
 
 # ABA 5: TUTORIAL
 with tab5:
-    st.markdown("## 📚 Manual do Usuário")
-    st.markdown("""<div class="warning-box"><strong>⚠️ PRÉ-REQUISITO</strong><br>Acesse o material na aba <strong>📂 MATERIAL</strong> ou siga pelo Tema do Dia.</div>""", unsafe_allow_html=True)
-    st.markdown("### 🧠 Metodologia")
-    st.markdown("1. **Sprint Teórico (20%)**\n2. **Questões (80%)**\n3. **Engenharia Reversa**")
+    st.markdown("## 📚 Manual do Usuário Enamed")
+    
+    st.markdown("""
+    <div class="warning-box">
+    <strong>⚠️ PRÉ-REQUISITO OBRIGATÓRIO</strong><br>
+    Este aplicativo é um <strong>GUIA DE ESTUDOS</strong>. Ele não contém os vídeos/PDFs hospedados aqui.<br><br>
+    Para estudar, acesse o link do Drive do Estratégia MED disponível na aba <strong>📂 MATERIAL</strong>.<br>
+    Se você usa outro cursinho, sem problemas! Basta se guiar pelo <strong>Tema do Dia</strong> descrito no cronograma.
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    st.markdown("### 🧠 Metodologia de Estudo")
+    st.markdown("""
+    Nossa abordagem é baseada em **Engenharia Reversa** e **Estudo Ativo**. Esqueça assistir 4 horas de aula passivamente!
+    
+    1.  **⚡ Sprint Teórico (20% do tempo):** Leia o resumo ou mapa mental do tema do dia no Drive. Entenda o básico.
+    2.  **📝 Questões (80% do tempo):** Vá para o banco de questões e faça a meta do dia (ex: 15 questões).
+    3.  **🔄 Engenharia Reversa:** O mais importante! Para cada questão que você errar (ou chutar), leia o comentário detalhado e entenda *por que* errou. Anote o conceito chave.
+    """)
+
+    st.divider()
+
+    st.markdown("### 📱 Fluxo de Uso do App")
+    st.markdown("""
+    1.  **Abra o App:** Faça login com seu Avatar.
+    2.  **Verifique a Meta:** Vá na aba "Lições", abra a Semana atual e veja a tarefa do dia (ex: *Pediatria - Imunizações*).
+    3.  **Estude:** Vá até o seu Drive/Material, encontre a aula correspondente e estude seguindo a metodologia acima.
+    4.  **Registre o Link (Opcional):** Se achar um resumo top ou o link direto da pasta, clique em *🔗 Adicionar Link* no app e cole lá para facilitar seu acesso futuro (e dos colegas).
+    5.  **Conclua:** Volte ao app e clique em **✅ Concluir**. Pronto! Seus 100 XP estão garantidos.
+    """)
+    
+    st.divider()
+    
+    col1, col2 = st.columns(2)
+    with col1:
+        st.info("📅 **Prazo:** Tente cumprir a meta no dia correto para ganhar pontuação máxima (Verde).")
+    with col2:
+        st.warning("🐢 **Atrasos:** Se fizer depois do prazo, a tarefa fica Amarela e vale metade dos pontos.")
