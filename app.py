@@ -23,51 +23,40 @@ st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="wide")
 
 # --- CSS GLOBAL ---
 st.markdown("""
-    /* === CHAT ESTILO (CORRIGIDO V12) === */
-    .chat-msg-container {
+    </* === CORREÇÃO DO CHAT (BOTÃO INVISÍVEL E ALINHADO) === */
+    
+    /* Alinha verticalmente os itens do chat (mensagem e botão) */
+    [data-testid="column"] {
         display: flex;
-        gap: 8px;
-        margin-bottom: 0px; /* Removido margem extra */
-        align-items: center; /* Centraliza itens dentro do container */
-        font-size: 12px;
-        width: 100%;
+        align-items: center !important; /* Centraliza verticalmente */
+        height: 100%;
     }
-    .chat-avatar-img {
-        width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0;
-    }
-    .chat-avatar-emoji {
-        width: 28px; height: 28px; font-size: 18px; text-align: center; flex-shrink: 0;
-    }
-    .chat-bubble {
-        background-color: #f0f2f6;
-        padding: 8px 12px;
-        border-radius: 12px;
-        border-top-left-radius: 0px;
-        flex-grow: 1;
-        color: #333;
-        line-height: 1.4;
-    }
-    .chat-header {
-        font-size: 10px; color: #888; margin-bottom: 2px; display: flex; justify-content: space-between;
-    }
-    .chat-header strong { color: #58cc02; }
 
-    /* === LIXEIRA INVISÍVEL NO CHAT === */
-    /* Isso remove a borda e o fundo SOMENTE dos botões secundários da barra lateral */
-    section[data-testid="stSidebar"] button[kind="secondary"] {
+    /* Estilo Específico para o Botão de Lixeira (Invisível) */
+    /* Remove bordas e fundo apenas dos botões secundários pequenos do chat */
+    div[data-testid="stVerticalBlock"] button[kind="secondary"] {
         border: none !important;
-        background: transparent !important;
+        background-color: transparent !important;
         box-shadow: none !important;
+        color: #999 !important; /* Cor do ícone cinza discreto */
         padding: 0px !important;
-        color: #999 !important; /* Cor do ícone cinza */
-        margin-top: 5px !important; /* Pequeno ajuste para descer */
+        transition: color 0.3s;
     }
-    section[data-testid="stSidebar"] button[kind="secondary"]:hover {
-        color: #ff4b4b !important; /* Vermelho ao passar mouse */
-        background: transparent !important;
+    
+    /* Ao passar o mouse na lixeira, fica vermelha */
+    div[data-testid="stVerticalBlock"] button[kind="secondary"]:hover {
+        color: #ff4b4b !important;
+        background-color: transparent !important;
     }
-    section[data-testid="stSidebar"] button[kind="secondary"]:active {
-        background: transparent !important;
+    
+    /* Ajuste fino da bolha do chat */
+    .chat-bubble {
+        margin-top: 5px; /* Pequeno ajuste para alinhar com o botão */
+    }>
+    @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Varela Round', sans-serif;
     }
     
     /* === TRADUÇÃO UPLOAD === */
