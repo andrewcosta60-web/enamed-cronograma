@@ -20,7 +20,7 @@ def get_brazil_date():
     return get_brazil_time().date()
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Enade Oficial", page_icon="🏥", layout="wide") 
+st.set_page_config(page_title="Enare Oficial", page_icon="🏥", layout="wide") 
 
 # --- CSS GLOBAL (ESTILO) ---
 st.markdown("""
@@ -583,7 +583,7 @@ if "logged_user" not in st.session_state:
         c1, c2, c3 = st.columns([1, 6, 1])
         with c2:
             st.markdown("<div style='text-align: center; font-size: 80px;'>🏥</div>", unsafe_allow_html=True)
-            st.markdown("<h1 style='text-align: center;'>Enade Diário</h1>", unsafe_allow_html=True)
+            st.markdown("<h1 style='text-align: center;'>Enare Diário</h1>", unsafe_allow_html=True)
             st.caption("<div style='text-align: center;'>Controle Dia a Dia • 2026</div>", unsafe_allow_html=True)
             
             tab_login, tab_register = st.tabs(["🔑 Entrar", "➕ Novo Participante"])
@@ -730,7 +730,7 @@ tasks_done = df[f"{current_user}_Status"].sum() if f"{current_user}_Status" in d
 pct_completo = (tasks_done / total_tasks) * 100 if total_tasks > 0 else 0
 
 c_title, c_dash = st.columns([1.5, 2.5])
-with c_title: st.markdown("<div class='custom-title'>🏥 Desafio<br>Enade</div>", unsafe_allow_html=True)
+with c_title: st.markdown("<div class='custom-title'>🏥 Desafio<br>Enare</div>", unsafe_allow_html=True)
 with c_dash:
     st.markdown(f"""
     <div style="display: flex; gap: 10px; height: 100%; align-items: center;">
@@ -889,7 +889,7 @@ with tab4:
 
 # ABA 5: TUTORIAL
 with tab5:
-    st.markdown("## 📚 Manual do Usuário Enade")
+    st.markdown("## 📚 Manual do Usuário Enare")
     
     st.markdown("""
     <div class="warning-box">
