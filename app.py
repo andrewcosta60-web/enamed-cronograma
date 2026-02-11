@@ -164,21 +164,121 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CONFIGURAÇÕES ---
-CSV_FILE = "enamed_db_v4.csv"
-LINK_FILE = "drive_link.txt" 
+# --- CONEXÃO GOOGLE SHEETS (O ROBÔ) ---
+def get_db_connection():
+    # 1. Define permissões
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    
+    # 2. Verifica se a senha está no Streamlit
+    if "gcp_service_account" not in st.secrets:
+        st.error("🚨 ERRO DE CONFIGURAÇÃO: Vá em 'Settings > Secrets' no Streamlit e cole o TOML do JSON.")
+        st.stop()
+        
+    # 3. Conecta no Google
+    try:
+        creds_dict = st.secrets["gcp_service_account"]
+        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+        client = gspread.authorize(creds)
+    except Exception as e:
+        st.error(f"🚨 ERRO NA SENHA (SECRETS): Verifique se copiou o JSON corretamente. Detalhe: {e}")
+        st.stop()
+    
+    # 4. Abre a planilha 'enare_db'
+    try:
+        return client.open("enare_db").sheet1
+    except Exception as e:
+        st.error(f"""
+        🚨 ERRO AO ABRIR PLANILHA: Não encontrei a planilha 'enare_db'.
+        
+        VERIFIQUE:
+        1. Você criou uma planilha chamada EXATAMENTE: enare_db
+        2. Você clicou em 'Compartilhar' e colou o email do robô: {creds_dict.get('client_email')}
+        """)
+        st.stop()
+
+# --- FUNÇÕES DE BANCO DE DADOS ---
+
+def init_db_online(sheet):
+    # Lê o cronograma do texto abaixo
+    f = io.StringIO(RAW_SCHEDULE)
+    reader = csv.DictReader(f)
+    
+    rows = []
+    # Monta as linhas
+    for i, row_data in enumerate(reader):
+        try:
+            dt_obj = datetime.strptime(row_data['Data'], "%d/%m/%Y").date()
+            formatted_date = str(dt_obj)
+        except:
+            formatted_date = str(get_brazil_date())
+
+        row_dict = {
+            "ID": i + 1,
+            "Semana": int(row_data['Semana_Estudo']),
+            "Data_Alvo": formatted_date,
+            "Dia_Semana": row_data['Dia'],
+            "Disciplina": row_data['Disciplina'],
+            "Tema": row_data['Tema'],
+            "Meta": row_data['Meta_Diaria'],
+            "Link_Questões": "",
+            "Links_Content": "[]"
+        }
+        # Adiciona colunas dos usuários padrão
+        for user in DEFAULT_USERS:
+            row_dict[f"{user}_Status"] = False
+            row_dict[f"{user}_Date"] = None
+            
+        rows.append(row_dict)
+    
+    df = pd.DataFrame(rows)
+    
+    # Limpa e escreve tudo na planilha
+    try:
+        sheet.clear()
+        data_to_upload = [df.columns.values.tolist()] + df.values.tolist()
+        sheet.update(range_name='A1', values=data_to_upload)
+        return df
+    except Exception as e:
+        st.error(f"Erro ao escrever na planilha: {e}")
+        return df
+
+def load_data():
+    try:
+        sheet = get_db_connection()
+        data = sheet.get_all_records()
+        
+        # Se a planilha estiver vazia, PREENCHE AGORA
+        if not data:
+            with st.spinner("🚀 Configurando a planilha pela primeira vez..."):
+                return init_db_online(sheet)
+            
+        df = pd.DataFrame(data)
+        return df
+    except Exception as e:
+        st.error(f"Erro de conexão: {e}")
+        return pd.DataFrame()
+
+def save_data(df):
+    try:
+        sheet = get_db_connection()
+        sheet.clear()
+        data_to_upload = [df.columns.values.tolist()] + df.values.tolist()
+        sheet.update(range_name='A1', values=data_to_upload)
+    except Exception as e:
+        st.error(f"Erro ao salvar: {e}")
+
+# --- ARQUIVOS LOCAIS (AINDA NECESSÁRIOS PARA FOTO/CHAT) ---
 PROFILE_FILE = "profiles.json"
 CHAT_FILE = "chat_db.json"
 DEFAULT_USERS = [] 
 
-# Avatares
 AVATARS = [
     "👨‍⚕️", "👩‍⚕️", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🦄", "🐸", 
     "🦉", "🐙", "🦋", "🍄", "🔥", "🚀", "💡", "🧠", "🫀", "💊", 
     "💉", "🦠", "🧬", "🩺", "🚑", "🏥", "🐧", "🦈", "🦅", "🐺"
 ]
 
-# --- DADOS DO CRONOGRAMA (COMPLETO) ---
+# --- DADOS DO CRONOGRAMA ---
 RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 20/02/2026,Sex,1,Pediatria,Imunizações (Calendário),15 Questões + Eng. Reversa
 21/02/2026,Sáb,1,Medicina Preventiva,Vigilância em Saúde,30 Questões + Sprint Semanal
