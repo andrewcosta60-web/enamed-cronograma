@@ -9,11 +9,12 @@ import json
 import base64
 import uuid
 from PIL import Image
+import pytz
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # --- CONFIGURAÇÃO DE FUSO HORÁRIO (FORÇADA UTC-3) ---
 def get_brazil_time():
-    # Pega o horário universal (UTC) e subtrai 3 horas para chegar em Brasília
-    # Isso funciona em qualquer servidor (EUA, Europa, etc) sem precisar de configurar máquina
     return datetime.utcnow() - timedelta(hours=3)
 
 def get_brazil_date():
@@ -21,148 +22,6 @@ def get_brazil_date():
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enare Oficial", page_icon="🏥", layout="wide") 
-
-# --- CSS GLOBAL (ESTILO) ---
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
-    
-    html, body, [class*="css"] {
-        font-family: 'Varela Round', sans-serif;
-    }
-    
-    /* === TRADUÇÃO UPLOAD (PORTUGUÊS) === */
-    [data-testid="stFileUploaderDropzoneInstructions"] > div > span { display: none; }
-    [data-testid="stFileUploaderDropzoneInstructions"] > div::after {
-        content: "Arraste sua foto aqui ou clique para buscar";
-        font-size: 14px; color: #888; font-weight: bold; display: block; margin-top: -10px;
-    }
-    [data-testid="stFileUploaderDropzoneInstructions"] > div > small { display: none; }
-    
-    /* === BOTÕES VERDES (PRIMÁRIOS) === */
-    button[kind="primary"] {
-        background-color: #58cc02 !important;
-        border-color: #58cc02 !important;
-        color: white !important;
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        box-shadow: 0 4px 0 rgba(0,0,0,0.1);
-        transition: all 0.1s;
-    }
-    button[kind="primary"]:active {
-        box-shadow: none;
-        transform: translateY(2px);
-    }
-
-    /* === BOTÕES SECUNDÁRIOS (PADRÃO) === */
-    button[kind="secondary"] {
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        border: 1px solid #e0e0e0 !important;
-    }
-
-    /* === LIXEIRA INVISÍVEL NO CHAT (SIDEBAR) === */
-    /* Remove fundo e borda APENAS dos botões secundários da barra lateral (Lixeira) */
-    /* Nota: O botão de Sair e Atualizar devem ser Primários para não sumirem */
-    section[data-testid="stSidebar"] button[kind="secondary"] {
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        padding: 0px !important;
-        color: #bbb !important; /* Cinza claro */
-        margin-top: 5px !important;
-    }
-    section[data-testid="stSidebar"] button[kind="secondary"]:hover {
-        color: #ff4b4b !important; /* Vermelho ao passar o mouse */
-        background: transparent !important;
-    }
-
-    /* === CHAT VISUAL === */
-    .chat-msg-container {
-        display: flex;
-        gap: 8px;
-        align-items: center; /* Alinha foto, texto e botão no centro vertical */
-        font-size: 12px;
-        width: 100%;
-        margin-bottom: 2px;
-    }
-    .chat-avatar-img {
-        width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0;
-    }
-    .chat-avatar-emoji {
-        width: 28px; height: 28px; font-size: 18px; text-align: center; flex-shrink: 0;
-    }
-    .chat-bubble {
-        background-color: #f0f2f6;
-        padding: 8px 12px;
-        border-radius: 12px;
-        border-top-left-radius: 0px;
-        flex-grow: 1;
-        color: #333;
-        line-height: 1.4;
-    }
-    .chat-header {
-        font-size: 10px; color: #888; margin-bottom: 2px; display: flex; justify-content: space-between;
-    }
-    .chat-header strong { color: #58cc02; }
-
-   /* === PERFIL SIDEBAR (TAMANHO GIGANTE FORÇADO V17) === */
-    
-    /* Container para centralizar tudo */
-    .profile-container-custom {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }
-
-    /* FOTO: Tamanho fixo e mandatório */
-    .profile-img-fixed {
-        width: 200px !important;
-        height: 200px !important;
-        min-width: 200px !important; /* Impede o Streamlit de diminuir */
-        max-width: 200px !important;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 5px solid #58cc02;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    }
-
-    /* EMOJI: Tamanho gigante */
-    .profile-emoji-fixed {
-        font-size: 130px !important;
-        line-height: 1 !important;
-        text-align: center;
-    }
-    
-    /* NOME: Branco e grande */
-    .profile-name {
-        text-align: center;
-        font-weight: 900;
-        font-size: 26px !important;
-        color: white !important;
-        text-shadow: 0 2px 5px rgba(0,0,0,0.8);
-        margin-bottom: 20px;
-    }
-    
-    /* === OUTROS === */
-    .stProgress > div > div > div > div { background-color: #58cc02; }
-    .dash-card {
-        background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px;
-        text-align: center; border: 1px solid #dcdcdc; height: 100%;
-        display: flex; flex-direction: column; justify-content: center;
-    }
-    .dash-label { font-size: 11px !important; font-weight: bold !important; color: #333 !important; text-transform: uppercase; }
-    .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
-    .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
-    .saved-link-item { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 10px; border-radius: 10px; margin-bottom: 0px; display: flex; align-items: center; gap: 10px; }
-    .saved-link-item a { text-decoration: none; color: #0068c9; font-weight: bold; }
-    .delete-confirm-box { background-color: #ffe6e6; border: 1px solid #ffcccc; padding: 5px; border-radius: 5px; text-align: center; font-size: 12px; margin-bottom: 5px;}
-    .warning-box { background-color: #fff3e0; border-left: 5px solid #ff9800; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
-    </style>
-""", unsafe_allow_html=True)
 
 # --- CONEXÃO GOOGLE SHEETS (O ROBÔ) ---
 def get_db_connection():
@@ -534,6 +393,7 @@ RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 10/12/2026,Qui,42,Pediatria,Tuberculose,15 Questões + Eng. Reversa
 11/12/2026,Sex,43,Pediatria,Distúrbios Respiratórios,15 Questões + Eng. Reversa
 """
+
 # --- FUNÇÕES ---
 
 def get_users_from_df(df):
@@ -544,90 +404,40 @@ def get_users_from_df(df):
             users.append(user_name)
     return sorted(users)
 
-def init_db():
-    if not os.path.exists(CSV_FILE):
-        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Links_Content"]
-        for user in DEFAULT_USERS:
-            cols.extend([f"{user}_Status", f"{user}_Date"])
-            
-        df = pd.DataFrame(columns=cols)
-        
-        # Parse do CSV Raw (FULL)
-        f = io.StringIO(RAW_SCHEDULE)
-        reader = csv.DictReader(f)
-        
-        initial_data = []
-        for i, row_data in enumerate(reader):
-            try:
-                date_str = row_data['Data']
-                dt_obj = datetime.strptime(date_str, "%d/%m/%Y").date()
-                formatted_date = str(dt_obj)
-            except:
-                formatted_date = str(get_brazil_date()) 
+def add_new_user(df, new_name):
+    if f"{new_name}_Status" in df.columns:
+        return df, False, "Esse nome já existe!"
+    df[f"{new_name}_Status"] = False
+    df[f"{new_name}_Date"] = None
+    save_data(df) # SALVA NA NUVEM
+    return df, True, "Usuário criado com sucesso!"
 
-            row = [
-                i + 1, 
-                int(row_data['Semana_Estudo']), 
-                formatted_date, 
-                row_data['Dia'],
-                row_data['Disciplina'],
-                row_data['Tema'],
-                row_data['Meta_Diaria'],
-                "[]" # Lista vazia em JSON
-            ]
-            for _ in DEFAULT_USERS: row.extend([False, None])
-            initial_data.append(row)
-
-        for r in initial_data:
-            df.loc[len(df)] = r
-            
-        df.to_csv(CSV_FILE, index=False)
-
-def load_data():
-    if not os.path.exists(CSV_FILE): init_db()
-    return pd.read_csv(CSV_FILE)
-
-def save_data(df):
-    df.to_csv(CSV_FILE, index=False)
-
-# FUNÇÕES PERSISTÊNCIA LINK DO DRIVE
+# --- PERSISTÊNCIA LINK ---
 def get_saved_link():
     if os.path.exists(LINK_FILE):
-        with open(LINK_FILE, "r") as f:
-            return f.read().strip()
+        with open(LINK_FILE, "r") as f: return f.read().strip()
     return ""
 
 def save_drive_link_file(new_link):
-    with open(LINK_FILE, "w") as f:
-        f.write(new_link)
+    with open(LINK_FILE, "w") as f: f.write(new_link)
 
-# --- FUNÇÕES PARA PERFIL (FOTO/EMOJI) ---
+# --- PERFIS ---
 def load_profiles():
     if os.path.exists(PROFILE_FILE):
         try:
-            with open(PROFILE_FILE, "r") as f:
-                return json.load(f)
+            with open(PROFILE_FILE, "r") as f: return json.load(f)
         except: return {}
     return {}
 
 def save_profile(username, image_data):
     profiles = load_profiles()
     profiles[username] = image_data
-    with open(PROFILE_FILE, "w") as f:
-        json.dump(profiles, f)
+    with open(PROFILE_FILE, "w") as f: json.dump(profiles, f)
 
 def image_to_base64(image):
     buffered = io.BytesIO()
     image.save(buffered, format="PNG")
     return base64.b64encode(buffered.getvalue()).decode()
-
-def add_new_user(df, new_name):
-    if f"{new_name}_Status" in df.columns:
-        return df, False, "Esse nome já existe!"
-    df[f"{new_name}_Status"] = False
-    df[f"{new_name}_Date"] = None
-    save_data(df)
-    return df, True, "Usuário criado com sucesso!"
 
 def calculate_xp(target, completed_at):
     if pd.isna(completed_at) or str(completed_at) == "None" or str(completed_at) == "":
@@ -639,7 +449,7 @@ def calculate_xp(target, completed_at):
         else: return 50
     except: return 0
 
-# --- FUNÇÕES DE CHAT ---
+# --- CHAT ---
 def load_chat():
     if os.path.exists(CHAT_FILE):
         try:
@@ -649,27 +459,24 @@ def load_chat():
 
 def save_chat_message(user, msg, avatar_data):
     messages = load_chat()
-    new_msg = {
-        "id": str(uuid.uuid4()), 
-        "user": user,
-        "msg": msg,
-        "time": get_brazil_time().strftime("%d/%m %H:%M"), 
-        "avatar": avatar_data
-    }
+    new_msg = { "id": str(uuid.uuid4()), "user": user, "msg": msg, "time": get_brazil_time().strftime("%d/%m %H:%M"), "avatar": avatar_data }
     messages.append(new_msg)
     if len(messages) > 50: messages = messages[-50:] 
-    with open(CHAT_FILE, "w") as f:
-        json.dump(messages, f)
+    with open(CHAT_FILE, "w") as f: json.dump(messages, f)
 
 def delete_chat_message(msg_id):
     messages = load_chat()
     new_messages = [m for m in messages if m.get("id") != msg_id]
-    with open(CHAT_FILE, "w") as f:
-        json.dump(new_messages, f)
+    with open(CHAT_FILE, "w") as f: json.dump(new_messages, f)
 
 # --- INICIALIZAÇÃO ---
 df = load_data()
-ALL_USERS = get_users_from_df(df)
+if df.empty:
+    st.warning("⚠️ O banco de dados está vazio ou desconectado. Verifique as configurações.")
+    ALL_USERS = []
+else:
+    ALL_USERS = get_users_from_df(df)
+
 profiles = load_profiles()
 
 # --- LOGIN ---
@@ -720,8 +527,13 @@ if "logged_user" not in st.session_state:
                 if st.button("Salvar e Entrar"):
                     if nm and len(nm) > 2:
                         final_name = f"Dr(a). {nm}"
-                        df, success, msg = add_new_user(df, final_name)
-                        if success:
+                        if final_name in ALL_USERS:
+                            st.error("Esse nome já existe!")
+                        else:
+                            # Adicionar no Sheet
+                            df, success, msg = add_new_user(df, final_name)
+                            
+                            # Salvar perfil local
                             if uploaded_file is not None:
                                 try:
                                     img = Image.open(uploaded_file)
@@ -731,17 +543,16 @@ if "logged_user" not in st.session_state:
                                 except: pass
                             else:
                                 save_profile(final_name, avatar_choice)
+                            
                             st.session_state["logged_user"] = final_name
                             st.rerun()
-                        else: st.error(msg)
                     else: st.warning("Nome muito curto.")
         st.stop()
 
 current_user = st.session_state["logged_user"]
 
-# --- SIDEBAR (PERFIL + XP + CHAT OTIMIZADO) ---
+# --- SIDEBAR ---
 with st.sidebar:
-    # 1. PERFIL (COMPACTO)
     if current_user in profiles:
         profile_data = profiles[current_user]
         if len(profile_data) > 20: 
@@ -757,26 +568,21 @@ with st.sidebar:
         del st.session_state["logged_user"]
         st.rerun()
     
-    # 2. XP (COMPACTO)
     total_xp = 0
     for idx, row in df.iterrows():
         if f"{current_user}_Date" in df.columns:
             total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
     
     st.markdown(f"""<div class="xp-box"><div style="font-size: 12px; color: #aaa;">💎 XP ACUMULADO</div><div class="xp-val">{total_xp}</div></div>""", unsafe_allow_html=True)
-    
     st.divider()
 
-    # 3. CHAT (ECONOMIA DE ESPAÇO)
-    # Título e Botão de Atualizar na MESMA linha
+    # CHAT
     col_head, col_btn = st.columns([0.75, 0.25], vertical_alignment="center")
-    with col_head:
-        st.markdown("### 💬 Chat")
+    with col_head: st.markdown("### 💬 Chat")
     with col_btn:
-        if st.button("🔄", help="Atualizar mensagens", type="secondary"):
-            st.rerun()
+        if st.button("🔄", help="Atualizar mensagens", type="secondary"): st.rerun()
 
-    chat_container = st.container(height=280) # Aumentei um pouco pois ganhamos espaço
+    chat_container = st.container(height=280)
     messages = load_chat()
     
     with chat_container:
@@ -785,20 +591,10 @@ with st.sidebar:
             cols_chat = st.columns([0.85, 0.15], gap="small", vertical_alignment="center")
             with cols_chat[0]:
                 av_html = ""
-                if len(m['avatar']) > 20: 
-                    av_html = f'<img class="chat-avatar-img" src="data:image/png;base64,{m["avatar"]}">'
-                else: 
-                    av_html = f'<div class="chat-avatar-emoji">{m["avatar"]}</div>'
+                if len(m['avatar']) > 20: av_html = f'<img class="chat-avatar-img" src="data:image/png;base64,{m["avatar"]}">'
+                else: av_html = f'<div class="chat-avatar-emoji">{m["avatar"]}</div>'
                 
-                st.markdown(f"""
-                <div class="chat-msg-container">
-                    {av_html}
-                    <div class="chat-bubble">
-                        <div class="chat-header"><strong>{m['user']}</strong> <span>{m['time']}</span></div>
-                        {m['msg']}
-                    </div>
-                </div>""", unsafe_allow_html=True)
-            
+                st.markdown(f"""<div class="chat-msg-container">{av_html}<div class="chat-bubble"><div class="chat-header"><strong>{m['user']}</strong> <span>{m['time']}</span></div>{m['msg']}</div></div>""", unsafe_allow_html=True)
             with cols_chat[1]:
                 if m['user'] == current_user:
                     msg_id = m.get("id", "legacy")
@@ -806,8 +602,7 @@ with st.sidebar:
                         if msg_id == "legacy":
                             messages.pop(i)
                             with open(CHAT_FILE, "w") as f: json.dump(messages, f)
-                        else:
-                            delete_chat_message(msg_id)
+                        else: delete_chat_message(msg_id)
                         st.rerun()
             
     if prompt := st.chat_input("Mensagem...", key="sidebar_chat"):
@@ -846,7 +641,6 @@ st.divider()
 # --- ABAS ---
 tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 Lições", "🏆 Placar", "📂 Material", "⚙️ Admin", "🔰 Tutorial"])
 
-# ABA 1
 with tab1:
     st.markdown("### 📅 Cronograma Diário")
     semanas = sorted(df["Semana"].unique())
@@ -883,7 +677,7 @@ with tab1:
                 
                 c1, c2 = st.columns([4, 1])
                 with c1:
-                    with st.expander("🔗 Recursos / Links"):
+                    with st.expander("🔗 Recursos"):
                         try: links = json.loads(row['Links_Content'])
                         except: links = []
                         if links:
@@ -894,20 +688,15 @@ with tab1:
                                     st.session_state[f"conf_del_{row['ID']}_{i}"] = True
                                     st.rerun()
                                 if st.session_state.get(f"conf_del_{row['ID']}_{i}"):
-                                    st.warning(f"Excluir '{l['desc']}'?")
-                                    cc1, cc2 = st.columns(2)
-                                    if cc1.button("Sim", key=f"y{row['ID']}_{i}"):
+                                    if st.button("Confirma Exclusão?", key=f"y{row['ID']}_{i}"):
                                         links.pop(i); df.at[idx, "Links_Content"] = json.dumps(links); save_data(df); st.rerun()
-                                    if cc2.button("Não", key=f"n{row['ID']}_{i}"):
-                                        del st.session_state[f"conf_del_{row['ID']}_{i}"]; st.rerun()
                         
-                        st.caption("Adicionar Novo:")
                         nd = st.text_input("Nome:", key=f"dn{row['ID']}")
                         nu = st.text_input("URL:", key=f"du{row['ID']}")
                         if st.button("Adicionar", key=f"ba{row['ID']}", type="primary"):
                             if nd and nu:
                                 links.append({"desc": nd, "url": nu})
-                                df.at[idx, "Links_Content"] = json.dumps(links); save_data(df); st.success("Adicionado!"); st.rerun()
+                                df.at[idx, "Links_Content"] = json.dumps(links); save_data(df); st.rerun()
                 with c2:
                     if status:
                         if st.button("Desfazer", key=f"r{row['ID']}"):
@@ -921,7 +710,6 @@ with tab1:
                             save_data(df); st.rerun()
                 st.divider()
 
-# ABA 2: PLACAR
 with tab2:
     st.subheader("🏆 Classificação Geral")
     placar = []
@@ -943,22 +731,13 @@ with tab2:
         
         medal = ["🥇", "🥈", "🥉", ""][i] if i < 4 else ""
         bg = "#fff5c2" if i == 0 else "#f9f9f9"
-        st.markdown(f"""
-        <div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; align-items: center; color: black;">
-            <div style="display: flex; align-items: center;">
-                <span style="font-size:20px; margin-right: 10px;">{medal}</span>{av_html}<b>{r['User']}</b>
-            </div>
-            <div style="text-align:right;"><b>{r['XP']} XP</b><br><small>{r['Tasks']} lições</small></div>
-        </div>""", unsafe_allow_html=True)
+        st.markdown(f"""<div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; align-items: center; color: black;"><div style="display: flex; align-items: center;"><span style="font-size:20px; margin-right: 10px;">{medal}</span>{av_html}<b>{r['User']}</b></div><div style="text-align:right;"><b>{r['XP']} XP</b><br><small>{r['Tasks']} lições</small></div></div>""", unsafe_allow_html=True)
 
-# ABA 3: MATERIAL
 with tab3:
     st.markdown("## 📂 Repositório de Aulas")
-    st.markdown("Acesse abaixo o Google Drive contendo os PDFs, Vídeos e Resumos do Estratégia MED.")
     cur_link = get_saved_link()
     if cur_link: st.link_button("🚀 ACESSAR DRIVE DE ESTUDOS", cur_link, type="primary", use_container_width=True)
     else: st.warning("⚠️ Nenhum link configurado.")
-    st.divider()
     with st.expander("⚙️ Configurar Link"):
         if "d_unlock" not in st.session_state: st.session_state["d_unlock"] = False
         if not st.session_state["d_unlock"]:
@@ -971,7 +750,6 @@ with tab3:
             if st.button("Salvar", type="primary"):
                 save_drive_link_file(nl); st.success("Salvo!"); st.rerun()
 
-# ABA 4: ADMIN
 with tab4:
     st.header("⚙️ Administração")
     if "admin_unlocked" not in st.session_state: st.session_state["admin_unlocked"] = False
@@ -980,52 +758,12 @@ with tab4:
         if senha == "UNIARP": st.session_state["admin_unlocked"] = True; st.rerun()
     else:
         st.success("🔓 Liberado")
-        if st.button("🗑️ RESETAR TUDO", type="primary"):
-            if os.path.exists(CSV_FILE): os.remove(CSV_FILE)
+        if st.button("🗑️ RESETAR TUDO (LOCAL)", type="primary"):
             if os.path.exists(PROFILE_FILE): os.remove(PROFILE_FILE)
             if os.path.exists(CHAT_FILE): os.remove(CHAT_FILE)
             st.rerun()
-        if st.button("🔒 Sair"): st.session_state["admin_unlocked"] = False; st.rerun()
+        st.info("Para resetar o banco de dados principal, limpe a planilha 'enare_db' no Google Drive.")
 
-# ABA 5: TUTORIAL
 with tab5:
     st.markdown("## 📚 Manual do Usuário Enare")
-    
-    st.markdown("""
-    <div class="warning-box">
-    <strong>⚠️ PRÉ-REQUISITO OBRIGATÓRIO</strong><br>
-    Este aplicativo é um <strong>GUIA DE ESTUDOS</strong>. Ele não contém os vídeos/PDFs hospedados aqui.<br><br>
-    Para estudar, acesse o link do Drive do Estratégia MED disponível na aba <strong>📂 MATERIAL</strong>.<br>
-    Se você usa outro cursinho, sem problemas! Basta se guiar pelo <strong>Tema do Dia</strong> descrito no cronograma.
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.divider()
-
-    st.markdown("### 🧠 Metodologia de Estudo")
-    st.markdown("""
-    Nossa abordagem é baseada em **Engenharia Reversa** e **Estudo Ativo**. Esqueça assistir 4 horas de aula passivamente!
-    
-    1.  **⚡ Sprint Teórico (20% do tempo):** Leia o resumo ou mapa mental do tema do dia no Drive. Entenda o básico.
-    2.  **📝 Questões (80% do tempo):** Vá para o banco de questões e faça a meta do dia (ex: 15 questões).
-    3.  **🔄 Engenharia Reversa:** O mais importante! Para cada questão que você errar (ou chutar), leia o comentário detalhado e entenda *por que* errou. Anote o conceito chave.
-    """)
-
-    st.divider()
-
-    st.markdown("### 📱 Fluxo de Uso do App")
-    st.markdown("""
-    1.  **Abra o App:** Faça login com seu Avatar.
-    2.  **Verifique a Meta:** Vá na aba "Lições", abra a Semana atual e veja a tarefa do dia (ex: *Pediatria - Imunizações*).
-    3.  **Estude:** Vá até o seu Drive/Material, encontre a aula correspondente e estude seguindo a metodologia acima.
-    4.  **Registre o Link (Opcional):** Se achar um resumo top ou o link direto da pasta, clique em *🔗 Adicionar Link* no app e cole lá para facilitar seu acesso futuro (e dos colegas).
-    5.  **Conclua:** Volte ao app e clique em **✅ Concluir**. Pronto! Seus 100 XP estão garantidos.
-    """)
-    
-    st.divider()
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        st.info("📅 **Prazo:** Tente cumprir a meta no dia correto para ganhar pontuação máxima (Verde).")
-    with col2:
-        st.warning("🐢 **Atrasos:** Se fizer depois do prazo, a tarefa fica Amarela e vale metade dos pontos.")
+    st.markdown("""<div class="warning-box"><strong>⚠️ PRÉ-REQUISITO OBRIGATÓRIO</strong><br>Este aplicativo é um <strong>GUIA DE ESTUDOS</strong>. Ele não contém os vídeos/PDFs hospedados aqui.<br></div>""", unsafe_allow_html=True)
