@@ -9,11 +9,12 @@ import json
 import base64
 import uuid
 from PIL import Image
+import pytz
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 # --- CONFIGURAÇÃO DE FUSO HORÁRIO (FORÇADA UTC-3) ---
 def get_brazil_time():
-    # Pega o horário universal (UTC) e subtrai 3 horas para chegar em Brasília
-    # Isso funciona em qualquer servidor (EUA, Europa, etc) sem precisar de configurar máquina
     return datetime.utcnow() - timedelta(hours=3)
 
 def get_brazil_date():
@@ -22,151 +23,92 @@ def get_brazil_date():
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enare Oficial", page_icon="🏥", layout="wide") 
 
-# --- CSS GLOBAL (ESTILO) ---
-st.markdown("""
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+# --- CONEXÃO GOOGLE SHEETS (BANCO DE DADOS NA NUVEM) ---
+def get_db_connection():
+    # Define permissões
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     
-    html, body, [class*="css"] {
-        font-family: 'Varela Round', sans-serif;
-    }
+    # Pega a senha dos "Segredos" do Streamlit
+    # SE DER ERRO AQUI: É porque você não configurou o Secrets no site do Streamlit
+    if "gcp_service_account" not in st.secrets:
+        st.error("⚠️ Configuração de Segredos (Secrets) não encontrada! O App não consegue salvar no Google.")
+        st.stop()
+        
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    client = gspread.authorize(creds)
     
-    /* === TRADUÇÃO UPLOAD (PORTUGUÊS) === */
-    [data-testid="stFileUploaderDropzoneInstructions"] > div > span { display: none; }
-    [data-testid="stFileUploaderDropzoneInstructions"] > div::after {
-        content: "Arraste sua foto aqui ou clique para buscar";
-        font-size: 14px; color: #888; font-weight: bold; display: block; margin-top: -10px;
-    }
-    [data-testid="stFileUploaderDropzoneInstructions"] > div > small { display: none; }
+    # Abre a planilha
+    return client.open("enamed_db_v4").sheet1
+
+# --- FUNÇÕES DE CARREGAMENTO E SALVAMENTO ---
+
+def init_db_online(sheet):
+    # Se a planilha estiver vazia, cria o cronograma do zero
+    f = io.StringIO(RAW_SCHEDULE)
+    reader = csv.DictReader(f)
     
-    /* === BOTÕES VERDES (PRIMÁRIOS) === */
-    button[kind="primary"] {
-        background-color: #58cc02 !important;
-        border-color: #58cc02 !important;
-        color: white !important;
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        box-shadow: 0 4px 0 rgba(0,0,0,0.1);
-        transition: all 0.1s;
-    }
-    button[kind="primary"]:active {
-        box-shadow: none;
-        transform: translateY(2px);
-    }
+    rows = []
+    # Cria a estrutura inicial
+    for i, row_data in enumerate(reader):
+        try:
+            dt_obj = datetime.strptime(row_data['Data'], "%d/%m/%Y").date()
+            formatted_date = str(dt_obj)
+        except:
+            formatted_date = str(get_brazil_date())
 
-    /* === BOTÕES SECUNDÁRIOS (PADRÃO) === */
-    button[kind="secondary"] {
-        border-radius: 12px !important;
-        font-weight: bold !important;
-        border: 1px solid #e0e0e0 !important;
-    }
-
-    /* === LIXEIRA INVISÍVEL NO CHAT (SIDEBAR) === */
-    /* Remove fundo e borda APENAS dos botões secundários da barra lateral (Lixeira) */
-    /* Nota: O botão de Sair e Atualizar devem ser Primários para não sumirem */
-    section[data-testid="stSidebar"] button[kind="secondary"] {
-        border: none !important;
-        background: transparent !important;
-        box-shadow: none !important;
-        padding: 0px !important;
-        color: #bbb !important; /* Cinza claro */
-        margin-top: 5px !important;
-    }
-    section[data-testid="stSidebar"] button[kind="secondary"]:hover {
-        color: #ff4b4b !important; /* Vermelho ao passar o mouse */
-        background: transparent !important;
-    }
-
-    /* === CHAT VISUAL === */
-    .chat-msg-container {
-        display: flex;
-        gap: 8px;
-        align-items: center; /* Alinha foto, texto e botão no centro vertical */
-        font-size: 12px;
-        width: 100%;
-        margin-bottom: 2px;
-    }
-    .chat-avatar-img {
-        width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0;
-    }
-    .chat-avatar-emoji {
-        width: 28px; height: 28px; font-size: 18px; text-align: center; flex-shrink: 0;
-    }
-    .chat-bubble {
-        background-color: #f0f2f6;
-        padding: 8px 12px;
-        border-radius: 12px;
-        border-top-left-radius: 0px;
-        flex-grow: 1;
-        color: #333;
-        line-height: 1.4;
-    }
-    .chat-header {
-        font-size: 10px; color: #888; margin-bottom: 2px; display: flex; justify-content: space-between;
-    }
-    .chat-header strong { color: #58cc02; }
-
-   /* === PERFIL SIDEBAR (TAMANHO GIGANTE FORÇADO V17) === */
+        row_dict = {
+            "ID": i + 1,
+            "Semana": int(row_data['Semana_Estudo']),
+            "Data_Alvo": formatted_date,
+            "Dia_Semana": row_data['Dia'],
+            "Disciplina": row_data['Disciplina'],
+            "Tema": row_data['Tema'],
+            "Meta": row_data['Meta_Diaria'],
+            "Link_Questões": "",
+            "Links_Content": "[]"
+        }
+        # Adiciona colunas dos usuários padrão se houver
+        for user in DEFAULT_USERS:
+            row_dict[f"{user}_Status"] = False
+            row_dict[f"{user}_Date"] = None
+            
+        rows.append(row_dict)
     
-    /* Container para centralizar tudo */
-    .profile-container-custom {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        width: 100%;
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }
-
-    /* FOTO: Tamanho fixo e mandatório */
-    .profile-img-fixed {
-        width: 200px !important;
-        height: 200px !important;
-        min-width: 200px !important; /* Impede o Streamlit de diminuir */
-        max-width: 200px !important;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 5px solid #58cc02;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-    }
-
-    /* EMOJI: Tamanho gigante */
-    .profile-emoji-fixed {
-        font-size: 130px !important;
-        line-height: 1 !important;
-        text-align: center;
-    }
+    df = pd.DataFrame(rows)
     
-    /* NOME: Branco e grande */
-    .profile-name {
-        text-align: center;
-        font-weight: 900;
-        font-size: 26px !important;
-        color: white !important;
-        text-shadow: 0 2px 5px rgba(0,0,0,0.8);
-        margin-bottom: 20px;
-    }
-    
-    /* === OUTROS === */
-    .stProgress > div > div > div > div { background-color: #58cc02; }
-    .dash-card {
-        background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px;
-        text-align: center; border: 1px solid #dcdcdc; height: 100%;
-        display: flex; flex-direction: column; justify-content: center;
-    }
-    .dash-label { font-size: 11px !important; font-weight: bold !important; color: #333 !important; text-transform: uppercase; }
-    .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
-    .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
-    .saved-link-item { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 10px; border-radius: 10px; margin-bottom: 0px; display: flex; align-items: center; gap: 10px; }
-    .saved-link-item a { text-decoration: none; color: #0068c9; font-weight: bold; }
-    .delete-confirm-box { background-color: #ffe6e6; border: 1px solid #ffcccc; padding: 5px; border-radius: 5px; text-align: center; font-size: 12px; margin-bottom: 5px;}
-    .warning-box { background-color: #fff3e0; border-left: 5px solid #ff9800; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
-    </style>
-""", unsafe_allow_html=True)
+    # Salva no Sheets
+    sheet.clear()
+    sheet.update([df.columns.values.tolist()] + df.values.tolist())
+    return df
 
-# --- CONFIGURAÇÕES ---
-CSV_FILE = "enamed_db_v4.csv"
-LINK_FILE = "drive_link.txt" 
+def load_data():
+    try:
+        sheet = get_db_connection()
+        data = sheet.get_all_records()
+        
+        if not data:
+            return init_db_online(sheet)
+            
+        df = pd.DataFrame(data)
+        return df
+    except Exception as e:
+        # Se falhar a conexão, cria um DF vazio local para não travar a tela de login
+        st.warning(f"Modo Offline: Não foi possível conectar ao Google Sheets ({e})")
+        return pd.DataFrame()
+
+def save_data(df):
+    try:
+        sheet = get_db_connection()
+        # Atualiza a planilha
+        sheet.clear()
+        sheet.update([df.columns.values.tolist()] + df.values.tolist())
+    except Exception as e:
+        st.error(f"Erro ao salvar dados na nuvem: {e}")
+
+# --- ARQUIVOS LOCAIS (PERFIS E CHAT) ---
+# Nota: Perfis e Chat ainda são locais. Para persistir 100%, 
+# precisariam ir para outras abas da planilha, mas vamos manter assim por enquanto.
 PROFILE_FILE = "profiles.json"
 CHAT_FILE = "chat_db.json"
 DEFAULT_USERS = [] 
@@ -178,7 +120,7 @@ AVATARS = [
     "💉", "🦠", "🧬", "🩺", "🚑", "🏥", "🐧", "🦈", "🦅", "🐺"
 ]
 
-# --- DADOS DO CRONOGRAMA (COMPLETO) ---
+# --- DADOS DO CRONOGRAMA (CORRIGIDO AS ASPAS) ---
 RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 20/02/2026,Sex,1,Pediatria,Imunizações (Calendário),15 Questões + Eng. Reversa
 21/02/2026,Sáb,1,Medicina Preventiva,Vigilância em Saúde,30 Questões + Sprint Semanal
@@ -434,138 +376,172 @@ RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 10/12/2026,Qui,42,Pediatria,Tuberculose,15 Questões + Eng. Reversa
 11/12/2026,Sex,43,Pediatria,Distúrbios Respiratórios,15 Questões + Eng. Reversa
 """
-# --- FUNÇÕES ---
 
-def get_users_from_df(df):
-    users = []
-    for col in df.columns:
-        if col.endswith("_Status"):
-            user_name = col.replace("_Status", "")
-            users.append(user_name)
-    return sorted(users)
-
-def init_db():
-    if not os.path.exists(CSV_FILE):
-        cols = ["ID", "Semana", "Data_Alvo", "Dia_Semana", "Disciplina", "Tema", "Meta", "Links_Content"]
-        for user in DEFAULT_USERS:
-            cols.extend([f"{user}_Status", f"{user}_Date"])
-            
-        df = pd.DataFrame(columns=cols)
-        
-        # Parse do CSV Raw (FULL)
-        f = io.StringIO(RAW_SCHEDULE)
-        reader = csv.DictReader(f)
-        
-        initial_data = []
-        for i, row_data in enumerate(reader):
-            try:
-                date_str = row_data['Data']
-                dt_obj = datetime.strptime(date_str, "%d/%m/%Y").date()
-                formatted_date = str(dt_obj)
-            except:
-                formatted_date = str(get_brazil_date()) 
-
-            row = [
-                i + 1, 
-                int(row_data['Semana_Estudo']), 
-                formatted_date, 
-                row_data['Dia'],
-                row_data['Disciplina'],
-                row_data['Tema'],
-                row_data['Meta_Diaria'],
-                "[]" # Lista vazia em JSON
-            ]
-            for _ in DEFAULT_USERS: row.extend([False, None])
-            initial_data.append(row)
-
-        for r in initial_data:
-            df.loc[len(df)] = r
-            
-        df.to_csv(CSV_FILE, index=False)
-
-def load_data():
-    if not os.path.exists(CSV_FILE): init_db()
-    return pd.read_csv(CSV_FILE)
-
-def save_data(df):
-    df.to_csv(CSV_FILE, index=False)
-
-# FUNÇÕES PERSISTÊNCIA LINK DO DRIVE
-def get_saved_link():
-    if os.path.exists(LINK_FILE):
-        with open(LINK_FILE, "r") as f:
-            return f.read().strip()
-    return ""
-
-def save_drive_link_file(new_link):
-    with open(LINK_FILE, "w") as f:
-        f.write(new_link)
-
-# --- FUNÇÕES PARA PERFIL (FOTO/EMOJI) ---
-def load_profiles():
-    if os.path.exists(PROFILE_FILE):
-        try:
-            with open(PROFILE_FILE, "r") as f:
-                return json.load(f)
-        except: return {}
-    return {}
-
-def save_profile(username, image_data):
-    profiles = load_profiles()
-    profiles[username] = image_data
-    with open(PROFILE_FILE, "w") as f:
-        json.dump(profiles, f)
-
-def image_to_base64(image):
-    buffered = io.BytesIO()
-    image.save(buffered, format="PNG")
-    return base64.b64encode(buffered.getvalue()).decode()
-
-def add_new_user(df, new_name):
-    if f"{new_name}_Status" in df.columns:
-        return df, False, "Esse nome já existe!"
-    df[f"{new_name}_Status"] = False
-    df[f"{new_name}_Date"] = None
-    save_data(df)
-    return df, True, "Usuário criado com sucesso!"
-
-def calculate_xp(target, completed_at):
-    if pd.isna(completed_at) or str(completed_at) == "None" or str(completed_at) == "":
-        return 0
-    try:
-        t = datetime.strptime(str(target), "%Y-%m-%d").date()
-        c = datetime.strptime(str(completed_at), "%Y-%m-%d").date()
-        if c <= t: return 100
-        else: return 50
-    except: return 0
-
-# --- FUNÇÕES DE CHAT ---
-def load_chat():
-    if os.path.exists(CHAT_FILE):
-        try:
-            with open(CHAT_FILE, "r") as f: return json.load(f)
-        except: return []
-    return []
-
-def save_chat_message(user, msg, avatar_data):
-    messages = load_chat()
-    new_msg = {
-        "id": str(uuid.uuid4()), 
-        "user": user,
-        "msg": msg,
-        "time": get_brazil_time().strftime("%d/%m %H:%M"), 
-        "avatar": avatar_data
+# --- CSS GLOBAL (ESTILO) ---
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+    
+    html, body, [class*="css"] {
+        font-family: 'Varela Round', sans-serif;
     }
-    messages.append(new_msg)
-    if len(messages) > 50: messages = messages[-50:] 
-    with open(CHAT_FILE, "w") as f:
-        json.dump(messages, f)
+    
+    /* === TRADUÇÃO UPLOAD (PORTUGUÊS) === */
+    [data-testid="stFileUploaderDropzoneInstructions"] > div > span { display: none; }
+    [data-testid="stFileUploaderDropzoneInstructions"] > div::after {
+        content: "Arraste sua foto aqui ou clique para buscar";
+        font-size: 14px; color: #888; font-weight: bold; display: block; margin-top: -10px;
+    }
+    [data-testid="stFileUploaderDropzoneInstructions"] > div > small { display: none; }
+    
+    /* === BOTÕES VERDES (PRIMÁRIOS) === */
+    button[kind="primary"] {
+        background-color: #58cc02 !important;
+        border-color: #58cc02 !important;
+        color: white !important;
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+        transition: all 0.1s;
+    }
+    button[kind="primary"]:active {
+        box-shadow: none;
+        transform: translateY(2px);
+    }
 
-def delete_chat_message(msg_id):
-    messages = load_chat()
-    new_messages = [m for m in messages if m.get("id") != msg_id]
-    with open(CHAT_FILE, "w") as f:
-        json.dump(new_messages, f)
+    /* === BOTÕES SECUNDÁRIOS (PADRÃO) === */
+    button[kind="secondary"] {
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        border: 1px solid #e0e0e0 !important;
+    }
+
+    /* === LIXEIRA INVISÍVEL NO CHAT (SIDEBAR) === */
+    /* Remove fundo e borda APENAS dos botões secundários da barra lateral (Lixeira) */
+    /* Nota: O botão de Sair e Atualizar devem ser Primários para não sumirem */
+    section[data-testid="stSidebar"] button[kind="secondary"] {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0px !important;
+        color: #bbb !important; /* Cinza claro */
+        margin-top: 5px !important;
+    }
+    section[data-testid="stSidebar"] button[kind="secondary"]:hover {
+        color: #ff4b4b !important; /* Vermelho ao passar o mouse */
+        background: transparent !important;
+    }
+
+    /* === CHAT VISUAL === */
+    .chat-msg-container {
+        display: flex;
+        gap: 8px;
+        align-items: center; /* Alinha foto, texto e botão no centro vertical */
+        font-size: 12px;
+        width: 100%;
+        margin-bottom: 2px;
+    }
+    .chat-avatar-img {
+        width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0;
+    }
+    .chat-avatar-emoji {
+        width: 28px; height: 28px; font-size: 18px; text-align: center; flex-shrink: 0;
+    }
+    .chat-bubble {
+        background-color: #f0f2f6;
+        padding: 8px 12px;
+        border-radius: 12px;
+        border-top-left-radius: 0px;
+        flex-grow: 1;
+        color: #333;
+        line-height: 1.4;
+    }
+    .chat-header {
+        font-size: 10px; color: #888; margin-bottom: 2px; display: flex; justify-content: space-between;
+    }
+    .chat-header strong { color: #58cc02; }
+
+    /* === PERFIL SIDEBAR (V18 - MENOR E MAIS ALTO) === */
+    
+    /* Container para centralizar tudo - Margens reduzidas */
+    .profile-container-custom {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-top: 5px !important; /* Subiu o topo */
+        margin-bottom: 10px !important; /* Reduziu espaço abaixo */
+    }
+
+    /* FOTO: Tamanho reduzido para 160px (antes era 200px) */
+    .profile-img-fixed {
+        width: 160px !important;
+        height: 160px !important;
+        min-width: 160px !important;
+        max-width: 160px !important;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #58cc02;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    /* EMOJI */
+    .profile-emoji-fixed {
+        font-size: 100px !important;
+        line-height: 1 !important;
+        text-align: center;
+        margin-top: 10px;
+    }
+    
+    /* NOME: Mais próximo da foto */
+    .profile-name {
+        text-align: center;
+        font-weight: 900;
+        font-size: 22px !important;
+        color: white !important;
+        text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+        margin-bottom: 10px !important; /* Menos espaço para o botão sair */
+        margin-top: 5px !important;
+    }
+    
+    /* XP Box - Mais compacta */
+    .xp-box {
+        background-color: #262730; border: 1px solid #444; border-radius: 10px;
+        padding: 5px; text-align: center; margin-top: 0px; margin-bottom: 10px;
+    }
+    .xp-val { font-size: 22px; font-weight: bold; color: #58cc02; line-height: 1.2; }
+
+    /* === BOTÃO DE ATUALIZAR AZUL (Personalizado) === */
+    /* Afeta apenas o botão dentro da coluna específica do chat */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        border: 1px solid #0099ff !important;
+        background-color: rgba(0, 153, 255, 0.1) !important;
+        color: #0099ff !important;
+        font-size: 16px !important;
+        padding: 2px 8px !important;
+        height: auto !important;
+    }
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+        background-color: #0099ff !important;
+        color: white !important;
+    }
+    
+    /* === OUTROS === */
+    .stProgress > div > div > div > div { background-color: #58cc02; }
+    .dash-card {
+        background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px;
+        text-align: center; border: 1px solid #dcdcdc; height: 100%;
+        display: flex; flex-direction: column; justify-content: center;
+    }
+    .dash-label { font-size: 11px !important; font-weight: bold !important; color: #333 !important; text-transform: uppercase; }
+    .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
+    .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
+    .saved-link-item { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 10px; border-radius: 10px; margin-bottom: 0px; display: flex; align-items: center; gap: 10px; }
+    .saved-link-item a { text-decoration: none; color: #0068c9; font-weight: bold; }
+    .delete-confirm-box { background-color: #ffe6e6; border: 1px solid #ffcccc; padding: 5px; border-radius: 5px; text-align: center; font-size: 12px; margin-bottom: 5px;}
+    .warning-box { background-color: #fff3e0; border-left: 5px solid #ff9800; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
+    </style>
+""", unsafe_allow_html=True)
 
 # --- INICIALIZAÇÃO ---
 df = load_data()
@@ -620,8 +596,15 @@ if "logged_user" not in st.session_state:
                 if st.button("Salvar e Entrar"):
                     if nm and len(nm) > 2:
                         final_name = f"Dr(a). {nm}"
-                        df, success, msg = add_new_user(df, final_name)
-                        if success:
+                        # ADICIONAR NOVO USUÁRIO AO SHEET
+                        if f"{final_name}_Status" in df.columns:
+                            st.error("Esse nome já existe!")
+                        else:
+                            df[f"{final_name}_Status"] = False
+                            df[f"{final_name}_Date"] = None
+                            save_data(df) # SALVA NA NUVEM
+                            
+                            # SALVA PERFIL LOCAL (AINDA É ARQUIVO)
                             if uploaded_file is not None:
                                 try:
                                     img = Image.open(uploaded_file)
@@ -631,9 +614,9 @@ if "logged_user" not in st.session_state:
                                 except: pass
                             else:
                                 save_profile(final_name, avatar_choice)
+                            
                             st.session_state["logged_user"] = final_name
                             st.rerun()
-                        else: st.error(msg)
                     else: st.warning("Nome muito curto.")
         st.stop()
 
@@ -817,7 +800,7 @@ with tab1:
                         lbl_b = "Entregar" if today > d_alvo else "Concluir"
                         if st.button(lbl_b, key=f"c{row['ID']}", type=btn_t):
                             df.at[idx, f"{current_user}_Status"] = True
-                            df.at[idx, f"{current_user}_Date"] = str(date.today())
+                            df.at[idx, f"{current_user}_Date"] = str(get_brazil_date()) 
                             save_data(df); st.rerun()
                 st.divider()
 
