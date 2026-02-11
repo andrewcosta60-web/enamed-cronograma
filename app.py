@@ -13,7 +13,7 @@ import pytz
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
-# --- CONFIGURAÇÃO DE FUSO HORÁRIO (FORÇADA UTC-3) ---
+# --- CONFIGURAÇÃO DE FUSO HORÁRIO ---
 def get_brazil_time():
     return datetime.utcnow() - timedelta(hours=3)
 
@@ -23,47 +23,34 @@ def get_brazil_date():
 # --- CONFIGURAÇÃO DA PÁGINA ---
 st.set_page_config(page_title="Enare Oficial", page_icon="🏥", layout="wide") 
 
-# --- CONEXÃO GOOGLE SHEETS (O ROBÔ) ---
+# --- CONEXÃO GOOGLE SHEETS ---
 def get_db_connection():
-    # 1. Define permissões
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     
-    # 2. Verifica se a senha está no Streamlit
     if "gcp_service_account" not in st.secrets:
-        st.error("🚨 ERRO DE CONFIGURAÇÃO: Vá em 'Settings > Secrets' no Streamlit e cole o TOML do JSON.")
+        st.error("⚠️ Secrets não configurados.")
         st.stop()
         
-    # 3. Conecta no Google
-    try:
-        creds_dict = st.secrets["gcp_service_account"]
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
-        client = gspread.authorize(creds)
-    except Exception as e:
-        st.error(f"🚨 ERRO NA SENHA (SECRETS): Verifique se copiou o JSON corretamente. Detalhe: {e}")
-        st.stop()
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    client = gspread.authorize(creds)
     
-    # 4. Abre a planilha 'enare_db'
+    # Tenta conectar na planilha
     try:
-        return client.open("enare_db").sheet1
-    except Exception as e:
-        st.error(f"""
-        🚨 ERRO AO ABRIR PLANILHA: Não encontrei a planilha 'enare_db'.
-        
-        VERIFIQUE:
-        1. Você criou uma planilha chamada EXATAMENTE: enare_db
-        2. Você clicou em 'Compartilhar' e colou o email do robô: {creds_dict.get('client_email')}
-        """)
-        st.stop()
+        return client.open("enamed_db_v4.csv").sheet1
+    except:
+        try:
+            return client.open("enamed_db_v4").sheet1
+        except:
+            return client.open("enare_db").sheet1
 
-# --- FUNÇÕES DE BANCO DE DADOS ---
+# --- FUNÇÕES DE CARREGAMENTO E SALVAMENTO ---
 
 def init_db_online(sheet):
-    # Lê o cronograma do texto abaixo
     f = io.StringIO(RAW_SCHEDULE)
     reader = csv.DictReader(f)
     
     rows = []
-    # Monta as linhas
     for i, row_data in enumerate(reader):
         try:
             dt_obj = datetime.strptime(row_data['Data'], "%d/%m/%Y").date()
@@ -82,7 +69,6 @@ def init_db_online(sheet):
             "Link_Questões": "",
             "Links_Content": "[]"
         }
-        # Adiciona colunas dos usuários padrão
         for user in DEFAULT_USERS:
             row_dict[f"{user}_Status"] = False
             row_dict[f"{user}_Date"] = None
@@ -90,15 +76,13 @@ def init_db_online(sheet):
         rows.append(row_dict)
     
     df = pd.DataFrame(rows)
-    
-    # Limpa e escreve tudo na planilha
     try:
         sheet.clear()
         data_to_upload = [df.columns.values.tolist()] + df.values.tolist()
         sheet.update(range_name='A1', values=data_to_upload)
         return df
     except Exception as e:
-        st.error(f"Erro ao escrever na planilha: {e}")
+        st.error(f"Erro ao inicializar: {e}")
         return df
 
 def load_data():
@@ -106,27 +90,45 @@ def load_data():
         sheet = get_db_connection()
         data = sheet.get_all_records()
         
-        # Se a planilha estiver vazia, PREENCHE AGORA
         if not data:
-            with st.spinner("🚀 Configurando a planilha pela primeira vez..."):
-                return init_db_online(sheet)
+            return init_db_online(sheet)
             
         df = pd.DataFrame(data)
+        
+        # --- CORREÇÃO DE TIPOS DE DADOS (CRUCIAL) ---
+        # Converte colunas de Status (Texto -> Booleano)
+        for col in df.columns:
+            if "_Status" in col:
+                # Transforma "TRUE"/"FALSE" (texto) em True/False (lógica)
+                df[col] = df[col].astype(str).apply(lambda x: x.upper() == 'TRUE')
+        
+        # Garante que Semana e ID sejam números
+        if "Semana" in df.columns:
+            df["Semana"] = pd.to_numeric(df["Semana"], errors='coerce').fillna(0).astype(int)
+        if "ID" in df.columns:
+            df["ID"] = pd.to_numeric(df["ID"], errors='coerce').fillna(0).astype(int)
+            
         return df
     except Exception as e:
-        st.error(f"Erro de conexão: {e}")
+        st.error(f"Erro ao processar dados da planilha: {e}")
         return pd.DataFrame()
 
 def save_data(df):
     try:
         sheet = get_db_connection()
         sheet.clear()
-        data_to_upload = [df.columns.values.tolist()] + df.values.tolist()
+        # Converte Booleanos para String antes de salvar para evitar erros
+        df_save = df.copy()
+        for col in df_save.columns:
+            if "_Status" in col:
+                df_save[col] = df_save[col].apply(lambda x: "TRUE" if x else "FALSE")
+                
+        data_to_upload = [df_save.columns.values.tolist()] + df_save.values.tolist()
         sheet.update(range_name='A1', values=data_to_upload)
     except Exception as e:
         st.error(f"Erro ao salvar: {e}")
 
-# --- ARQUIVOS LOCAIS (AINDA NECESSÁRIOS PARA FOTO/CHAT) ---
+# --- ARQUIVOS LOCAIS ---
 PROFILE_FILE = "profiles.json"
 CHAT_FILE = "chat_db.json"
 DEFAULT_USERS = [] 
@@ -398,6 +400,8 @@ RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 
 def get_users_from_df(df):
     users = []
+    if df is None or df.empty:
+        return []
     for col in df.columns:
         if col.endswith("_Status"):
             user_name = col.replace("_Status", "")
@@ -405,11 +409,16 @@ def get_users_from_df(df):
     return sorted(users)
 
 def add_new_user(df, new_name):
+    if df is None or df.empty:
+        st.error("Erro: Banco de dados desconectado. Tente recarregar a página.")
+        return df, False, "Erro de conexão."
+
     if f"{new_name}_Status" in df.columns:
         return df, False, "Esse nome já existe!"
+        
     df[f"{new_name}_Status"] = False
     df[f"{new_name}_Date"] = None
-    save_data(df) # SALVA NA NUVEM
+    save_data(df) 
     return df, True, "Usuário criado com sucesso!"
 
 # --- PERSISTÊNCIA LINK ---
@@ -469,10 +478,49 @@ def delete_chat_message(msg_id):
     new_messages = [m for m in messages if m.get("id") != msg_id]
     with open(CHAT_FILE, "w") as f: json.dump(new_messages, f)
 
+# --- CSS GLOBAL (ESTILO) ---
+st.markdown("""
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
+    html, body, [class*="css"] { font-family: 'Varela Round', sans-serif; }
+    [data-testid="stFileUploaderDropzoneInstructions"] > div > span { display: none; }
+    [data-testid="stFileUploaderDropzoneInstructions"] > div::after { content: "Arraste sua foto aqui"; font-size: 14px; color: #888; font-weight: bold; display: block; margin-top: -10px; }
+    [data-testid="stFileUploaderDropzoneInstructions"] > div > small { display: none; }
+    button[kind="primary"] { background-color: #58cc02 !important; border-color: #58cc02 !important; color: white !important; border-radius: 12px !important; font-weight: bold !important; box-shadow: 0 4px 0 rgba(0,0,0,0.1); transition: all 0.1s; }
+    button[kind="primary"]:active { box-shadow: none; transform: translateY(2px); }
+    button[kind="secondary"] { border-radius: 12px !important; font-weight: bold !important; border: 1px solid #e0e0e0 !important; }
+    section[data-testid="stSidebar"] button[kind="secondary"] { border: none !important; background: transparent !important; box-shadow: none !important; padding: 0px !important; color: #bbb !important; margin-top: 5px !important; }
+    section[data-testid="stSidebar"] button[kind="secondary"]:hover { color: #ff4b4b !important; background: transparent !important; }
+    .chat-msg-container { display: flex; gap: 8px; align-items: center; font-size: 12px; width: 100%; margin-bottom: 2px; }
+    .chat-avatar-img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0; }
+    .chat-avatar-emoji { width: 28px; height: 28px; font-size: 18px; text-align: center; flex-shrink: 0; }
+    .chat-bubble { background-color: #f0f2f6; padding: 8px 12px; border-radius: 12px; border-top-left-radius: 0px; flex-grow: 1; color: #333; line-height: 1.4; }
+    .chat-header { font-size: 10px; color: #888; margin-bottom: 2px; display: flex; justify-content: space-between; }
+    .chat-header strong { color: #58cc02; }
+    .profile-container-custom { display: flex; justify-content: center; align-items: center; width: 100%; margin-top: 5px !important; margin-bottom: 10px !important; }
+    .profile-img-fixed { width: 160px !important; height: 160px !important; min-width: 160px !important; max-width: 160px !important; border-radius: 50%; object-fit: cover; border: 4px solid #58cc02; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+    .profile-emoji-fixed { font-size: 100px !important; line-height: 1 !important; text-align: center; margin-top: 10px; }
+    .profile-name { text-align: center; font-weight: 900; font-size: 22px !important; color: white !important; text-shadow: 0 2px 5px rgba(0,0,0,0.8); margin-bottom: 10px !important; margin-top: 5px !important; }
+    .xp-box { background-color: #262730; border: 1px solid #444; border-radius: 10px; padding: 5px; text-align: center; margin-top: 0px; margin-bottom: 10px; }
+    .xp-val { font-size: 22px; font-weight: bold; color: #58cc02; line-height: 1.2; }
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] { border: 1px solid #0099ff !important; background-color: rgba(0, 153, 255, 0.1) !important; color: #0099ff !important; font-size: 16px !important; padding: 2px 8px !important; height: auto !important; }
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover { background-color: #0099ff !important; color: white !important; }
+    .stProgress > div > div > div > div { background-color: #58cc02; }
+    .dash-card { background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px; text-align: center; border: 1px solid #dcdcdc; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+    .dash-label { font-size: 11px !important; font-weight: bold !important; color: #333 !important; text-transform: uppercase; }
+    .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
+    .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
+    .saved-link-item { background-color: #ffffff; border: 1px solid #e0e0e0; padding: 10px; border-radius: 10px; margin-bottom: 0px; display: flex; align-items: center; gap: 10px; }
+    .saved-link-item a { text-decoration: none; color: #0068c9; font-weight: bold; }
+    .delete-confirm-box { background-color: #ffe6e6; border: 1px solid #ffcccc; padding: 5px; border-radius: 5px; text-align: center; font-size: 12px; margin-bottom: 5px;}
+    .warning-box { background-color: #fff3e0; border-left: 5px solid #ff9800; padding: 15px; border-radius: 5px; margin-bottom: 10px; color: black; }
+    </style>
+""", unsafe_allow_html=True)
+
 # --- INICIALIZAÇÃO ---
 df = load_data()
 if df.empty:
-    st.warning("⚠️ O banco de dados está vazio ou desconectado. Verifique as configurações.")
+    st.warning("⚠️ O banco de dados está vazio ou incorreto. Aguarde...")
     ALL_USERS = []
 else:
     ALL_USERS = get_users_from_df(df)
@@ -569,9 +617,10 @@ with st.sidebar:
         st.rerun()
     
     total_xp = 0
-    for idx, row in df.iterrows():
-        if f"{current_user}_Date" in df.columns:
-            total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
+    if not df.empty:
+        for idx, row in df.iterrows():
+            if f"{current_user}_Date" in df.columns:
+                total_xp += calculate_xp(row["Data_Alvo"], row[f"{current_user}_Date"])
     
     st.markdown(f"""<div class="xp-box"><div style="font-size: 12px; color: #aaa;">💎 XP ACUMULADO</div><div class="xp-val">{total_xp}</div></div>""", unsafe_allow_html=True)
     st.divider()
@@ -612,17 +661,25 @@ with st.sidebar:
 
 # --- DASHBOARD ---
 today = get_brazil_date() 
-df['dt_obj'] = pd.to_datetime(df['Data_Alvo']).dt.date
-future_tasks = df[df['dt_obj'] >= today]
-if df['dt_obj'].min() > today: status_cronograma = "Pré-Edital"
-elif future_tasks.empty: status_cronograma = "Concluído"
-else:
-    prox_semana = future_tasks.iloc[0]['Semana']
-    status_cronograma = f"Semana {prox_semana:02d}"
+if not df.empty:
+    df['dt_obj'] = pd.to_datetime(df['Data_Alvo']).dt.date
+    future_tasks = df[df['dt_obj'] >= today]
+    if df['dt_obj'].min() > today: status_cronograma = "Pré-Edital"
+    elif future_tasks.empty: status_cronograma = "Concluído"
+    else:
+        prox_semana = future_tasks.iloc[0]['Semana']
+        status_cronograma = f"Semana {prox_semana:02d}"
 
-total_tasks = len(df)
-tasks_done = df[f"{current_user}_Status"].sum() if f"{current_user}_Status" in df.columns else 0
-pct_completo = (tasks_done / total_tasks) * 100 if total_tasks > 0 else 0
+    total_tasks = len(df)
+    if f"{current_user}_Status" in df.columns:
+        tasks_done = df[f"{current_user}_Status"].sum() 
+    else:
+        tasks_done = 0
+        
+    pct_completo = (tasks_done / total_tasks) * 100 if total_tasks > 0 else 0
+else:
+    status_cronograma = "Carregando..."
+    total_tasks, tasks_done, pct_completo = 0, 0, 0
 
 c_title, c_dash = st.columns([1.5, 2.5])
 with c_title: st.markdown("<div class='custom-title'>🏥 Desafio<br>Enare</div>", unsafe_allow_html=True)
@@ -643,95 +700,98 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs(["📚 Lições", "🏆 Placar", "📂 Ma
 
 with tab1:
     st.markdown("### 📅 Cronograma Diário")
-    semanas = sorted(df["Semana"].unique())
-    for sem in semanas:
-        df_week = df[df["Semana"] == sem]
-        xp_f, xp_t = 0, 0
-        for _, r in df_week.iterrows():
-            if f"{current_user}_Status" in df.columns:
-                xp_t += 100
-                if r[f"{current_user}_Status"]: xp_f += calculate_xp(r["Data_Alvo"], r[f"{current_user}_Date"])
-        
-        with st.expander(f"📍 Semana {sem:02d} — ({xp_f} / {xp_t} XP)", expanded=(sem==1)):
-            for _, row in df_week.iterrows():
-                idx = df[df["ID"] == row["ID"]].index[0]
-                status = row[f"{current_user}_Status"]
-                try: d_alvo = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date(); d_br = d_alvo.strftime("%d/%m")
-                except: d_alvo, d_br = get_brazil_date(), "--/--"
-                
-                bg, border = ("#e6fffa", "#58cc02") if status else ("#fff5d1", "#ffc800") if today > d_alvo else ("#ffffff", "#e5e5e5")
-                lbl, ico, clr = ("FEITO", "✅", "#58cc02") if status else ("ATRASADO", "⚠️", "#d4a000") if today > d_alvo else ("PRAZO", "📅", "#afafaf")
-                
-                st.markdown(f"""
-                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                    <div style="flex: 0 0 80px; border: 2px solid {clr}; border-radius: 12px; text-align: center; padding: 5px; color: {clr}; background-color: {bg};">
-                        <div style="font-size: 9px; font-weight: bold;">{lbl}</div><div style="font-size: 18px;">{ico}</div>
-                        <div style="font-size: 11px; font-weight: bold;">{row['Dia_Semana']}</div><div style="font-size: 12px; font-weight: bold;">{d_br}</div>
-                    </div>
-                    <div style="flex: 1; background-color: {bg}; border: 2px solid {border}; border-radius: 12px; padding: 10px;">
-                        <div style="font-size: 11px; color: #888; font-weight: bold; text-transform: uppercase;">{row['Disciplina']}</div>
-                        <div style="font-size: 15px; font-weight: bold; color: #444;">{row['Tema']}</div>
-                        <div style="font-size: 12px; color: #666;">🎯 {row['Meta']}</div>
-                    </div>
-                </div>""", unsafe_allow_html=True)
-                
-                c1, c2 = st.columns([4, 1])
-                with c1:
-                    with st.expander("🔗 Recursos"):
-                        try: links = json.loads(row['Links_Content'])
-                        except: links = []
-                        if links:
-                            for i, l in enumerate(links):
-                                cl, cd = st.columns([6, 1])
-                                cl.markdown(f'<div class="saved-link-item"><a href="{l["url"]}" target="_blank">🔗 {l["desc"]}</a></div>', unsafe_allow_html=True)
-                                if cd.button("🗑️", key=f"d{row['ID']}_{i}", type="secondary"):
-                                    st.session_state[f"conf_del_{row['ID']}_{i}"] = True
-                                    st.rerun()
-                                if st.session_state.get(f"conf_del_{row['ID']}_{i}"):
-                                    if st.button("Confirma Exclusão?", key=f"y{row['ID']}_{i}"):
-                                        links.pop(i); df.at[idx, "Links_Content"] = json.dumps(links); save_data(df); st.rerun()
-                        
-                        nd = st.text_input("Nome:", key=f"dn{row['ID']}")
-                        nu = st.text_input("URL:", key=f"du{row['ID']}")
-                        if st.button("Adicionar", key=f"ba{row['ID']}", type="primary"):
-                            if nd and nu:
-                                links.append({"desc": nd, "url": nu})
-                                df.at[idx, "Links_Content"] = json.dumps(links); save_data(df); st.rerun()
-                with c2:
-                    if status:
-                        if st.button("Desfazer", key=f"r{row['ID']}"):
-                            df.at[idx, f"{current_user}_Status"] = False; save_data(df); st.rerun()
-                    else:
-                        btn_t = "secondary" if today > d_alvo else "primary"
-                        lbl_b = "Entregar" if today > d_alvo else "Concluir"
-                        if st.button(lbl_b, key=f"c{row['ID']}", type=btn_t):
-                            df.at[idx, f"{current_user}_Status"] = True
-                            df.at[idx, f"{current_user}_Date"] = str(date.today())
-                            save_data(df); st.rerun()
-                st.divider()
+    if not df.empty:
+        semanas = sorted(df["Semana"].unique())
+        for sem in semanas:
+            df_week = df[df["Semana"] == sem]
+            xp_f, xp_t = 0, 0
+            for _, r in df_week.iterrows():
+                if f"{current_user}_Status" in df.columns:
+                    xp_t += 100
+                    if r[f"{current_user}_Status"]: xp_f += calculate_xp(r["Data_Alvo"], r[f"{current_user}_Date"])
+            
+            with st.expander(f"📍 Semana {sem:02d} — ({xp_f} / {xp_t} XP)", expanded=(sem==1)):
+                for _, row in df_week.iterrows():
+                    idx = df[df["ID"] == row["ID"]].index[0]
+                    status = row[f"{current_user}_Status"] if f"{current_user}_Status" in df.columns else False
+                    try: d_alvo = datetime.strptime(str(row["Data_Alvo"]), "%Y-%m-%d").date(); d_br = d_alvo.strftime("%d/%m")
+                    except: d_alvo, d_br = get_brazil_date(), "--/--"
+                    
+                    bg, border = ("#e6fffa", "#58cc02") if status else ("#fff5d1", "#ffc800") if today > d_alvo else ("#ffffff", "#e5e5e5")
+                    lbl, ico, clr = ("FEITO", "✅", "#58cc02") if status else ("ATRASADO", "⚠️", "#d4a000") if today > d_alvo else ("PRAZO", "📅", "#afafaf")
+                    
+                    st.markdown(f"""
+                    <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                        <div style="flex: 0 0 80px; border: 2px solid {clr}; border-radius: 12px; text-align: center; padding: 5px; color: {clr}; background-color: {bg};">
+                            <div style="font-size: 9px; font-weight: bold;">{lbl}</div><div style="font-size: 18px;">{ico}</div>
+                            <div style="font-size: 11px; font-weight: bold;">{row['Dia_Semana']}</div><div style="font-size: 12px; font-weight: bold;">{d_br}</div>
+                        </div>
+                        <div style="flex: 1; background-color: {bg}; border: 2px solid {border}; border-radius: 12px; padding: 10px;">
+                            <div style="font-size: 11px; color: #888; font-weight: bold; text-transform: uppercase;">{row['Disciplina']}</div>
+                            <div style="font-size: 15px; font-weight: bold; color: #444;">{row['Tema']}</div>
+                            <div style="font-size: 12px; color: #666;">🎯 {row['Meta']}</div>
+                        </div>
+                    </div>""", unsafe_allow_html=True)
+                    
+                    c1, c2 = st.columns([4, 1])
+                    with c1:
+                        with st.expander("🔗 Recursos"):
+                            try: links = json.loads(row['Links_Content'])
+                            except: links = []
+                            if links:
+                                for i, l in enumerate(links):
+                                    cl, cd = st.columns([6, 1])
+                                    cl.markdown(f'<div class="saved-link-item"><a href="{l["url"]}" target="_blank">🔗 {l["desc"]}</a></div>', unsafe_allow_html=True)
+                                    if cd.button("🗑️", key=f"d{row['ID']}_{i}", type="secondary"):
+                                        st.session_state[f"conf_del_{row['ID']}_{i}"] = True
+                                        st.rerun()
+                                    if st.session_state.get(f"conf_del_{row['ID']}_{i}"):
+                                        if st.button("Confirma Exclusão?", key=f"y{row['ID']}_{i}"):
+                                            links.pop(i); df.at[idx, "Links_Content"] = json.dumps(links); save_data(df); st.rerun()
+                            
+                            nd = st.text_input("Nome:", key=f"dn{row['ID']}")
+                            nu = st.text_input("URL:", key=f"du{row['ID']}")
+                            if st.button("Adicionar", key=f"ba{row['ID']}", type="primary"):
+                                if nd and nu:
+                                    links.append({"desc": nd, "url": nu})
+                                    df.at[idx, "Links_Content"] = json.dumps(links); save_data(df); st.rerun()
+                    with c2:
+                        if status:
+                            if st.button("Desfazer", key=f"r{row['ID']}"):
+                                df.at[idx, f"{current_user}_Status"] = False; save_data(df); st.rerun()
+                        else:
+                            btn_t = "secondary" if today > d_alvo else "primary"
+                            lbl_b = "Entregar" if today > d_alvo else "Concluir"
+                            if st.button(lbl_b, key=f"c{row['ID']}", type=btn_t):
+                                df.at[idx, f"{current_user}_Status"] = True
+                                df.at[idx, f"{current_user}_Date"] = str(date.today())
+                                save_data(df); st.rerun()
+                    st.divider()
 
 with tab2:
     st.subheader("🏆 Classificação Geral")
     placar = []
-    for u in ALL_USERS:
-        pts, tks = 0, 0
-        for _, r in df.iterrows():
-            if f"{u}_Date" in df.columns:
-                p = calculate_xp(r["Data_Alvo"], r[f"{u}_Date"])
-                if p > 0: pts += p; tks += 1
-        placar.append({"User": u, "XP": pts, "Tasks": tks})
-    
-    df_p = pd.DataFrame(placar).sort_values("XP", ascending=False).reset_index(drop=True)
-    for i, r in df_p.iterrows():
-        av_html = ""
-        if r['User'] in profiles:
-            pd_img = profiles[r['User']]
-            if len(pd_img) > 20: av_html = f'<img src="data:image/png;base64,{pd_img}" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 10px; vertical-align: middle;">'
-            else: av_html = f'<span style="font-size: 24px; margin-right: 10px;">{pd_img}</span>'
+    if not df.empty:
+        for u in ALL_USERS:
+            pts, tks = 0, 0
+            for _, r in df.iterrows():
+                if f"{u}_Date" in df.columns:
+                    p = calculate_xp(r["Data_Alvo"], r[f"{u}_Date"])
+                    if p > 0: pts += p; tks += 1
+            placar.append({"User": u, "XP": pts, "Tasks": tks})
         
-        medal = ["🥇", "🥈", "🥉", ""][i] if i < 4 else ""
-        bg = "#fff5c2" if i == 0 else "#f9f9f9"
-        st.markdown(f"""<div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; align-items: center; color: black;"><div style="display: flex; align-items: center;"><span style="font-size:20px; margin-right: 10px;">{medal}</span>{av_html}<b>{r['User']}</b></div><div style="text-align:right;"><b>{r['XP']} XP</b><br><small>{r['Tasks']} lições</small></div></div>""", unsafe_allow_html=True)
+        if placar:
+            df_p = pd.DataFrame(placar).sort_values("XP", ascending=False).reset_index(drop=True)
+            for i, r in df_p.iterrows():
+                av_html = ""
+                if r['User'] in profiles:
+                    pd_img = profiles[r['User']]
+                    if len(pd_img) > 20: av_html = f'<img src="data:image/png;base64,{pd_img}" style="width: 30px; height: 30px; border-radius: 50%; margin-right: 10px; vertical-align: middle;">'
+                    else: av_html = f'<span style="font-size: 24px; margin-right: 10px;">{pd_img}</span>'
+                
+                medal = ["🥇", "🥈", "🥉", ""][i] if i < 4 else ""
+                bg = "#fff5c2" if i == 0 else "#f9f9f9"
+                st.markdown(f"""<div style="background-color:{bg}; padding:10px; border-radius:10px; margin-bottom:5px; border:1px solid #ddd; display:flex; justify-content:space-between; align-items: center; color: black;"><div style="display: flex; align-items: center;"><span style="font-size:20px; margin-right: 10px;">{medal}</span>{av_html}<b>{r['User']}</b></div><div style="text-align:right;"><b>{r['XP']} XP</b><br><small>{r['Tasks']} lições</small></div></div>""", unsafe_allow_html=True)
 
 with tab3:
     st.markdown("## 📂 Repositório de Aulas")
@@ -762,7 +822,7 @@ with tab4:
             if os.path.exists(PROFILE_FILE): os.remove(PROFILE_FILE)
             if os.path.exists(CHAT_FILE): os.remove(CHAT_FILE)
             st.rerun()
-        st.info("Para resetar o banco de dados principal, limpe a planilha 'enare_db' no Google Drive.")
+        st.info("Para resetar o banco de dados principal, limpe a planilha no Google Drive.")
 
 with tab5:
     st.markdown("## 📚 Manual do Usuário Enare")
