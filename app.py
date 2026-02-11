@@ -990,7 +990,7 @@ with tab5:
     st.markdown("""
     <div class="warning-box">
     <strong>🚀 O QUE É ESTE APP?</strong><br>
-    Pense neste aplicativo como seu <strong>Adaptação de um cronograma de estudos</strong>. Ele não "dá aula", ele te diz exatamente <strong>o que fazer</strong> hoje para você não perder tempo planejando.
+    Pense neste aplicativo como uma <strong>Adaptação de um cronograma de estudos</strong>. Ele não "dá aula", ele te diz exatamente <strong>o que fazer</strong> hoje para você não perder tempo planejando.
     </div>
     """, unsafe_allow_html=True)
 
