@@ -969,6 +969,7 @@ with tab3:
             if st.button("Salvar", type="primary"):
                 save_drive_link_file(nl); st.success("Salvo!"); st.rerun()
 
+# ABA 4: ADMIN
 with tab4:
     st.header("⚙️ Administração")
     if "admin_unlocked" not in st.session_state: st.session_state["admin_unlocked"] = False
@@ -977,12 +978,18 @@ with tab4:
         if senha == "UNIARP": st.session_state["admin_unlocked"] = True; st.rerun()
     else:
         st.success("🔓 Liberado")
-        if st.button("🗑️ RESETAR TUDO (LOCAL)", type="primary"):
-            if os.path.exists(PROFILE_FILE): os.remove(PROFILE_FILE)
-            if os.path.exists(CHAT_FILE): os.remove(CHAT_FILE)
+        
+        # Botão corrigido: Apaga apenas o Chat (que é local)
+        if st.button("🗑️ LIMPAR CHAT (LOCAL)", type="primary"):
+            if os.path.exists("chat_db.json"): 
+                os.remove("chat_db.json")
+            st.success("Chat reiniciado!")
             st.rerun()
-        st.info("Para resetar o banco de dados principal, limpe a planilha no Google Drive.")
-
+            
+        st.info("ℹ️ **Nota:** Os Usuários, Fotos e Progresso estão salvos na nuvem (Google Sheets). Para resetar um usuário, apague a linha dele diretamente na sua planilha.")
+        
+        if st.button("🔒 Sair"): st.session_state["admin_unlocked"] = False; st.rerun()
+            
 # ABA 5: TUTORIAL
 with tab5:
     st.markdown("<h2 style='text-align: center; color: #333;'>🎓 Guia de Sobrevivência Enare</h2>", unsafe_allow_html=True)
