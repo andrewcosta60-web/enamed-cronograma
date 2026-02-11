@@ -1107,7 +1107,7 @@ with tab5:
     2.  **Estude:** Saia do App, abra o Drive (ou seu livro) e foque apenas nesse tema.
     3.  **Marque como Feito:** Assim que terminar, volte aqui e clique no botão **✅ Concluir**.
     
-    > **💡 Dica de Ouro:** Não tente assistir 4 horas de aula. Leia o resumo, entenda o conceito e vá direto para as questões. O Cronograma foi feita para estudar em média 45min.
+    > **💡 Dica de Ouro:** Não tente assistir 4 horas de aula. Leia o resumo, entenda o conceito e vá direto para as questões. O Cronograma foi feito para estudar em média 45min.
     """)
 
     st.divider()
