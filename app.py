@@ -986,3 +986,65 @@ with tab4:
 with tab5:
     st.markdown("## 📚 Manual do Usuário Enare")
     st.markdown("""<div class="warning-box"><strong>⚠️ PRÉ-REQUISITO OBRIGATÓRIO</strong><br>Este aplicativo é um <strong>GUIA DE ESTUDOS</strong>. Ele não contém os vídeos/PDFs hospedados aqui.<br></div>""", unsafe_allow_html=True)
+
+# ABA 5: TUTORIAL
+with tab5:
+    st.markdown("<h2 style='text-align: center; color: #333;'>🎓 Guia de Sobrevivência Enare</h2>", unsafe_allow_html=True)
+    
+    st.markdown("""
+    <div class="warning-box">
+    <strong>🚀 O QUE É ESTE APP?</strong><br>
+    Pense neste aplicativo como seu <strong>Personal Trainer de Estudos</strong>. Ele não "dá aula", ele te diz exatamente <strong>o que fazer</strong> hoje para você não perder tempo planejando.
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.divider()
+
+    st.markdown("### 1️⃣ Onde está o conteúdo? (Aulas/PDFs)")
+    st.markdown("""
+    Para estudar, você precisa acessar o material didático. Você tem duas opções:
+    
+    * **📂 Opção 1: O Drive da Turma (Recomendado)**
+        Vá até a aba **MATERIAL** aqui no App. Lá existe um botão azul que te leva direto para o Google Drive com as pastas organizadas do Estratégia/Medcurso.
+    
+    * **📚 Opção 2: Material Próprio (Livre)**
+        Se você já tem seus livros, assina outro cursinho ou prefere usar Flashcards (Anki), **tudo bem!** O App define a **META** (ex: "Estudar Asma"), mas você é livre para escolher **ONDE** estudar esse tema.
+    """)
+
+    st.divider()
+
+    st.markdown("### 2️⃣ Como usar o Cronograma?")
+    st.markdown("""
+    Vá na aba **📚 LIÇÕES**. É lá que a mágica acontece.
+    
+    1.  **Consulte a Meta:** Abra a Semana atual. O App vai te dizer: *"Hoje é dia de Pediatria - Tema: Imunizações"*.
+    2.  **Estude:** Saia do App, abra o Drive (ou seu livro) e foque apenas nesse tema.
+    3.  **Marque como Feito:** Assim que terminar, volte aqui e clique no botão **✅ Concluir**.
+    
+    > **💡 Dica de Ouro:** Não tente assistir 4 horas de aula. Leia o resumo, entenda o conceito e vá direto para as questões.
+    """)
+
+    st.divider()
+
+    st.markdown("### 3️⃣ Gamificação e XP")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.success("""
+        **🟢 No Prazo (100 XP)**
+        
+        Se você marcar a tarefa como feita **no dia programado** (ou adiantar), ela fica VERDE e você ganha pontuação máxima.
+        """)
+    with col2:
+        st.warning("""
+        **🟡 Atrasado (50 XP)**
+        
+        Se o dia passar e você não fizer, a tarefa não some! Ela fica disponível, mas ao concluir, ficará AMARELA e valerá metade dos pontos.
+        """)
+
+    st.divider()
+    
+    st.markdown("### 4️⃣ Contribua com Links")
+    st.info("""
+    Achou um resumo incrível na internet ou uma aula top no YouTube sobre o tema do dia?
+    Na aba **LIÇÕES**, clique em **"🔗 Recursos"** abaixo da aula e adicione o link lá. Ele ficará salvo para você e para todos os colegas que usam o App!
+    """)
