@@ -171,6 +171,96 @@ PROFILE_FILE = "profiles.json"
 CHAT_FILE = "chat_db.json"
 DEFAULT_USERS = [] 
 
+# --- CONEXÃO GOOGLE SHEETS (BANCO DE DADOS NA NUVEM) ---
+def get_db_connection():
+    # Define permissões
+    scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
+    
+    # Pega a senha dos "Segredos" do Streamlit
+    # SE DER ERRO AQUI: É porque você não configurou o Secrets no site do Streamlit
+    if "gcp_service_account" not in st.secrets:
+        st.error("⚠️ Configuração de Segredos (Secrets) não encontrada! O App não consegue salvar no Google.")
+        st.stop()
+        
+    creds_dict = st.secrets["gcp_service_account"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    client = gspread.authorize(creds)
+    
+    # Abre a planilha
+    return client.open("enamed_db_v4").sheet1
+
+# --- FUNÇÕES DE CARREGAMENTO E SALVAMENTO ---
+
+def init_db_online(sheet):
+    # Se a planilha estiver vazia, cria o cronograma do zero
+    f = io.StringIO(RAW_SCHEDULE)
+    reader = csv.DictReader(f)
+    
+    rows = []
+    # Cria a estrutura inicial
+    for i, row_data in enumerate(reader):
+        try:
+            dt_obj = datetime.strptime(row_data['Data'], "%d/%m/%Y").date()
+            formatted_date = str(dt_obj)
+        except:
+            formatted_date = str(get_brazil_date())
+
+        row_dict = {
+            "ID": i + 1,
+            "Semana": int(row_data['Semana_Estudo']),
+            "Data_Alvo": formatted_date,
+            "Dia_Semana": row_data['Dia'],
+            "Disciplina": row_data['Disciplina'],
+            "Tema": row_data['Tema'],
+            "Meta": row_data['Meta_Diaria'],
+            "Link_Questões": "",
+            "Links_Content": "[]"
+        }
+        # Adiciona colunas dos usuários padrão se houver
+        for user in DEFAULT_USERS:
+            row_dict[f"{user}_Status"] = False
+            row_dict[f"{user}_Date"] = None
+            
+        rows.append(row_dict)
+    
+    df = pd.DataFrame(rows)
+    
+    # Salva no Sheets
+    sheet.clear()
+    sheet.update([df.columns.values.tolist()] + df.values.tolist())
+    return df
+
+def load_data():
+    try:
+        sheet = get_db_connection()
+        data = sheet.get_all_records()
+        
+        if not data:
+            return init_db_online(sheet)
+            
+        df = pd.DataFrame(data)
+        return df
+    except Exception as e:
+        # Se falhar a conexão, cria um DF vazio local para não travar a tela de login
+        st.warning(f"Modo Offline: Não foi possível conectar ao Google Sheets ({e})")
+        return pd.DataFrame()
+
+def save_data(df):
+    try:
+        sheet = get_db_connection()
+        # Atualiza a planilha
+        sheet.clear()
+        sheet.update([df.columns.values.tolist()] + df.values.tolist())
+    except Exception as e:
+        st.error(f"Erro ao salvar dados na nuvem: {e}")
+
+# --- ARQUIVOS LOCAIS (PERFIS E CHAT) ---
+# Nota: Perfis e Chat ainda são locais. Para persistir 100%, 
+# precisariam ir para outras abas da planilha, mas vamos manter assim por enquanto.
+PROFILE_FILE = "profiles.json"
+CHAT_FILE = "chat_db.json"
+DEFAULT_USERS = [] 
+
 # Avatares
 AVATARS = [
     "👨‍⚕️", "👩‍⚕️", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🦄", "🐸", 
