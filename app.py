@@ -990,7 +990,7 @@ with tab5:
     st.markdown("""
     <div class="warning-box">
     <strong>🚀 O QUE É ESTE APP?</strong><br>
-    Pense neste aplicativo como seu <strong>Personal Trainer de Estudos</strong>. Ele não "dá aula", ele te diz exatamente <strong>o que fazer</strong> hoje para você não perder tempo planejando.
+    Pense neste aplicativo como seu <strong>Adaptação de um cronograma de estudos</strong>. Ele não "dá aula", ele te diz exatamente <strong>o que fazer</strong> hoje para você não perder tempo planejando.
     </div>
     """, unsafe_allow_html=True)
 
@@ -1001,7 +1001,7 @@ with tab5:
     Para estudar, você precisa acessar o material didático. Você tem duas opções:
     
     * **📂 Opção 1: O Drive da Turma (Recomendado)**
-        Vá até a aba **MATERIAL** aqui no App. Lá existe um botão azul que te leva direto para o Google Drive com as pastas organizadas do Estratégia/Medcurso.
+        Vá até a aba **MATERIAL** aqui no App. Lá existe um botão vermelho que te leva direto para o Google Drive com as pastas organizadas de um certo curso estreatégico.
     
     * **📚 Opção 2: Material Próprio (Livre)**
         Se você já tem seus livros, assina outro cursinho ou prefere usar Flashcards (Anki), **tudo bem!** O App define a **META** (ex: "Estudar Asma"), mas você é livre para escolher **ONDE** estudar esse tema.
@@ -1017,7 +1017,7 @@ with tab5:
     2.  **Estude:** Saia do App, abra o Drive (ou seu livro) e foque apenas nesse tema.
     3.  **Marque como Feito:** Assim que terminar, volte aqui e clique no botão **✅ Concluir**.
     
-    > **💡 Dica de Ouro:** Não tente assistir 4 horas de aula. Leia o resumo, entenda o conceito e vá direto para as questões.
+    > **💡 Dica de Ouro:** Não tente assistir 4 horas de aula. Leia o resumo, entenda o conceito e vá direto para as questões. O Cronograma foi feita para estudar em média 45min.
     """)
 
     st.divider()
