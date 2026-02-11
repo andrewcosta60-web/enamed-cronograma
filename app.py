@@ -42,20 +42,19 @@ def get_client():
 
 def get_sheet_instance():
     client = get_client()
+    # Tenta conectar no enare_db ou no antigo csv se o nome nao foi mudado
     try: return client.open("enare_db")
     except:
         try: return client.open("enamed_db_v4.csv")
         except: return client.open("enamed_db_v4")
 
-# --- GERENCIAMENTO DE PERFIS (ABA 'PROFILES') ---
+# --- GERENCIAMENTO DE PERFIS (ABA 2) ---
 def load_profiles_from_sheet():
     try:
         sh = get_sheet_instance()
-        # Tenta pegar a aba 'profiles'
         try:
             ws = sh.worksheet("profiles")
         except:
-            # Se não existir, cria
             ws = sh.add_worksheet(title="profiles", rows="100", cols="20")
             ws.append_row(["Username", "Avatar_Data"])
             return {}
@@ -66,24 +65,24 @@ def load_profiles_from_sheet():
             profiles[str(r["Username"])] = str(r["Avatar_Data"])
         return profiles
     except Exception as e:
-        print(f"Erro ao ler perfis: {e}")
         return {}
 
 def save_profile_to_sheet(username, image_data):
     try:
         sh = get_sheet_instance()
-        ws = sh.worksheet("profiles")
+        try:
+            ws = sh.worksheet("profiles")
+        except:
+            ws = sh.add_worksheet(title="profiles", rows="100", cols="20")
+            ws.append_row(["Username", "Avatar_Data"])
         
-        # Verifica se já existe
-        cell = ws.find(username)
-        if cell:
-            # Atualiza
+        try:
+            cell = ws.find(username)
             ws.update_cell(cell.row, 2, image_data)
-        else:
-            # Adiciona
+        except:
             ws.append_row([username, image_data])
     except Exception as e:
-        st.error(f"Erro ao salvar perfil na nuvem: {e}")
+        print(f"Erro perfil: {e}")
 
 # --- BANCO DE DADOS PRINCIPAL (ABA 1) ---
 def init_db_online(sheet_tab):
@@ -102,7 +101,8 @@ def init_db_online(sheet_tab):
     df = pd.DataFrame(rows)
     try:
         sheet_tab.clear()
-        sheet_tab.update([df.columns.values.tolist()] + df.values.tolist())
+        # Converte tudo para string para evitar erro
+        sheet_tab.update([df.columns.values.tolist()] + df.astype(str).values.tolist())
         return df
     except: return df
 
@@ -111,16 +111,20 @@ def load_data():
         sh = get_sheet_instance()
         sheet_tab = sh.sheet1
         data = sheet_tab.get_all_records()
+        
         if not data: return init_db_online(sheet_tab)
+        
         df = pd.DataFrame(data)
         
-        # Converte Status para Boolean
+        # Converte Status "TRUE"/"FALSE" para Boolean Python
         for col in df.columns:
             if "_Status" in col:
                 df[col] = df[col].astype(str).str.upper() == 'TRUE'
+        
         # Converte Números
         if "Semana" in df.columns: df["Semana"] = pd.to_numeric(df["Semana"], errors='coerce').fillna(0).astype(int)
         if "ID" in df.columns: df["ID"] = pd.to_numeric(df["ID"], errors='coerce').fillna(0).astype(int)
+        
         return df
     except: return pd.DataFrame()
 
@@ -129,19 +133,25 @@ def save_data(df):
         sh = get_sheet_instance()
         sheet_tab = sh.sheet1
         
-        # Expande a planilha se necessário (para caber novas colunas)
+        # Expande se precisar
         if len(df.columns) > sheet_tab.col_count:
-            sheet_tab.resize(rows=len(df)+10, cols=len(df.columns)+5)
+            sheet_tab.resize(rows=len(df)+50, cols=len(df.columns)+5)
             
         df_save = df.copy()
+        # Converte booleanos para texto explícito
         for col in df_save.columns:
             if "_Status" in col:
-                df_save[col] = df_save[col].apply(lambda x: "TRUE" if x else "FALSE")
-                
+                df_save[col] = df_save[col].apply(lambda x: "TRUE" if x is True else "FALSE")
+        
+        # Preenche vazios e converte tudo para string para o gspread não reclamar de numpy
+        df_save = df_save.fillna("")
+        
         sheet_tab.clear()
-        sheet_tab.update([df_save.columns.values.tolist()] + df_save.values.tolist())
+        # AQUI ESTAVA O ERRO: Adicionei .astype(str) para garantir compatibilidade
+        sheet_tab.update([df_save.columns.values.tolist()] + df_save.astype(str).values.tolist())
+        
     except Exception as e:
-        st.error(f"Erro ao salvar dados: {e}")
+        st.error(f"Erro crítico ao salvar dados: {e}")
 
 # --- FUNÇÕES DE SUPORTE ---
 def get_users_from_df(df):
@@ -158,7 +168,7 @@ def add_new_user(df, new_name):
     
     # Adiciona colunas
     df[f"{new_name}_Status"] = False
-    df[f"{new_name}_Date"] = None
+    df[f"{new_name}_Date"] = ""
     
     save_data(df) # Salva a estrutura na nuvem
     return df, True, "Sucesso"
@@ -185,7 +195,7 @@ def calculate_xp(target, completed_at):
         return 100 if c <= t else 50
     except: return 0
 
-# --- CHAT (MANTIDO LOCAL POR ENQUANTO PARA NÃO COMPLICAR MAIS) ---
+# --- CHAT (MANTIDO LOCAL) ---
 CHAT_FILE = "chat_db.json"
 def load_chat():
     if os.path.exists(CHAT_FILE):
@@ -461,34 +471,162 @@ RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 11/12/2026,Sex,43,Pediatria,Distúrbios Respiratórios,15 Questões + Eng. Reversa
 """
 
-# --- CSS GLOBAL ---
+# --- CSS GLOBAL (ESTILO) ---
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
-    html, body, [class*="css"] { font-family: 'Varela Round', sans-serif; }
+    
+    html, body, [class*="css"] {
+        font-family: 'Varela Round', sans-serif;
+    }
+    
+    /* === TRADUÇÃO UPLOAD (PORTUGUÊS) === */
     [data-testid="stFileUploaderDropzoneInstructions"] > div > span { display: none; }
-    [data-testid="stFileUploaderDropzoneInstructions"] > div::after { content: "Arraste sua foto aqui"; font-size: 14px; color: #888; font-weight: bold; display: block; margin-top: -10px; }
+    [data-testid="stFileUploaderDropzoneInstructions"] > div::after {
+        content: "Arraste sua foto aqui ou clique para buscar";
+        font-size: 14px; color: #888; font-weight: bold; display: block; margin-top: -10px;
+    }
     [data-testid="stFileUploaderDropzoneInstructions"] > div > small { display: none; }
-    button[kind="primary"] { background-color: #58cc02 !important; border-color: #58cc02 !important; color: white !important; border-radius: 12px !important; font-weight: bold !important; }
-    button[kind="secondary"] { border-radius: 12px !important; font-weight: bold !important; border: 1px solid #e0e0e0 !important; }
-    section[data-testid="stSidebar"] button[kind="secondary"] { border: none !important; background: transparent !important; box-shadow: none !important; padding: 0px !important; color: #bbb !important; margin-top: 5px !important; }
-    section[data-testid="stSidebar"] button[kind="secondary"]:hover { color: #ff4b4b !important; background: transparent !important; }
-    .chat-msg-container { display: flex; gap: 8px; align-items: center; font-size: 12px; width: 100%; margin-bottom: 2px; }
-    .chat-avatar-img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0; }
-    .chat-avatar-emoji { width: 28px; height: 28px; font-size: 18px; text-align: center; flex-shrink: 0; }
-    .chat-bubble { background-color: #f0f2f6; padding: 8px 12px; border-radius: 12px; border-top-left-radius: 0px; flex-grow: 1; color: #333; line-height: 1.4; }
-    .chat-header { font-size: 10px; color: #888; margin-bottom: 2px; display: flex; justify-content: space-between; }
+    
+    /* === BOTÕES VERDES (PRIMÁRIOS) === */
+    button[kind="primary"] {
+        background-color: #58cc02 !important;
+        border-color: #58cc02 !important;
+        color: white !important;
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+        transition: all 0.1s;
+    }
+    button[kind="primary"]:active {
+        box-shadow: none;
+        transform: translateY(2px);
+    }
+
+    /* === BOTÕES SECUNDÁRIOS (PADRÃO) === */
+    button[kind="secondary"] {
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        border: 1px solid #e0e0e0 !important;
+    }
+
+    /* === LIXEIRA INVISÍVEL NO CHAT (SIDEBAR) === */
+    /* Remove fundo e borda APENAS dos botões secundários da barra lateral (Lixeira) */
+    /* Nota: O botão de Sair e Atualizar devem ser Primários para não sumirem */
+    section[data-testid="stSidebar"] button[kind="secondary"] {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0px !important;
+        color: #bbb !important; /* Cinza claro */
+        margin-top: 5px !important;
+    }
+    section[data-testid="stSidebar"] button[kind="secondary"]:hover {
+        color: #ff4b4b !important; /* Vermelho ao passar o mouse */
+        background: transparent !important;
+    }
+
+    /* === CHAT VISUAL === */
+    .chat-msg-container {
+        display: flex;
+        gap: 8px;
+        align-items: center; /* Alinha foto, texto e botão no centro vertical */
+        font-size: 12px;
+        width: 100%;
+        margin-bottom: 2px;
+    }
+    .chat-avatar-img {
+        width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0;
+    }
+    .chat-avatar-emoji {
+        width: 28px; height: 28px; font-size: 18px; text-align: center; flex-shrink: 0;
+    }
+    .chat-bubble {
+        background-color: #f0f2f6;
+        padding: 8px 12px;
+        border-radius: 12px;
+        border-top-left-radius: 0px;
+        flex-grow: 1;
+        color: #333;
+        line-height: 1.4;
+    }
+    .chat-header {
+        font-size: 10px; color: #888; margin-bottom: 2px; display: flex; justify-content: space-between;
+    }
     .chat-header strong { color: #58cc02; }
-    .profile-container-custom { display: flex; justify-content: center; align-items: center; width: 100%; margin-top: 5px !important; margin-bottom: 10px !important; }
-    .profile-img-fixed { width: 160px !important; height: 160px !important; min-width: 160px !important; max-width: 160px !important; border-radius: 50%; object-fit: cover; border: 4px solid #58cc02; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-    .profile-emoji-fixed { font-size: 100px !important; line-height: 1 !important; text-align: center; margin-top: 10px; }
-    .profile-name { text-align: center; font-weight: 900; font-size: 22px !important; color: white !important; text-shadow: 0 2px 5px rgba(0,0,0,0.8); margin-bottom: 10px !important; margin-top: 5px !important; }
-    .xp-box { background-color: #262730; border: 1px solid #444; border-radius: 10px; padding: 5px; text-align: center; margin-top: 0px; margin-bottom: 10px; }
+
+    /* === PERFIL SIDEBAR (V18 - MENOR E MAIS ALTO) === */
+    
+    /* Container para centralizar tudo - Margens reduzidas */
+    .profile-container-custom {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-top: 5px !important; /* Subiu o topo */
+        margin-bottom: 10px !important; /* Reduziu espaço abaixo */
+    }
+
+    /* FOTO: Tamanho reduzido para 160px (antes era 200px) */
+    .profile-img-fixed {
+        width: 160px !important;
+        height: 160px !important;
+        min-width: 160px !important;
+        max-width: 160px !important;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #58cc02;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    /* EMOJI */
+    .profile-emoji-fixed {
+        font-size: 100px !important;
+        line-height: 1 !important;
+        text-align: center;
+        margin-top: 10px;
+    }
+    
+    /* NOME: Mais próximo da foto */
+    .profile-name {
+        text-align: center;
+        font-weight: 900;
+        font-size: 22px !important;
+        color: white !important;
+        text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+        margin-bottom: 10px !important; /* Menos espaço para o botão sair */
+        margin-top: 5px !important;
+    }
+    
+    /* XP Box - Mais compacta */
+    .xp-box {
+        background-color: #262730; border: 1px solid #444; border-radius: 10px;
+        padding: 5px; text-align: center; margin-top: 0px; margin-bottom: 10px;
+    }
     .xp-val { font-size: 22px; font-weight: bold; color: #58cc02; line-height: 1.2; }
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"] { border: 1px solid #0099ff !important; background-color: rgba(0, 153, 255, 0.1) !important; color: #0099ff !important; font-size: 16px !important; padding: 2px 8px !important; height: auto !important; }
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover { background-color: #0099ff !important; color: white !important; }
+
+    /* === BOTÃO DE ATUALIZAR AZUL (Personalizado) === */
+    /* Afeta apenas o botão dentro da coluna específica do chat */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        border: 1px solid #0099ff !important;
+        background-color: rgba(0, 153, 255, 0.1) !important;
+        color: #0099ff !important;
+        font-size: 16px !important;
+        padding: 2px 8px !important;
+        height: auto !important;
+    }
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+        background-color: #0099ff !important;
+        color: white !important;
+    }
+    
+    /* === OUTROS === */
     .stProgress > div > div > div > div { background-color: #58cc02; }
-    .dash-card { background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px; text-align: center; border: 1px solid #dcdcdc; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+    .dash-card {
+        background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px;
+        text-align: center; border: 1px solid #dcdcdc; height: 100%;
+        display: flex; flex-direction: column; justify-content: center;
+    }
     .dash-label { font-size: 11px !important; font-weight: bold !important; color: #333 !important; text-transform: uppercase; }
     .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
     .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
