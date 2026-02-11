@@ -13,6 +13,19 @@ import pytz
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+# --- CONFIGURAÇÕES GLOBAIS ---
+PROFILE_FILE = "profiles.json"
+CHAT_FILE = "chat_db.json"
+LINK_FILE = "drive_link.txt" # <--- CORREÇÃO: ADICIONADO PARA NÃO DAR ERRO NAS OUTRAS ABAS
+DEFAULT_USERS = [] 
+
+# Avatares
+AVATARS = [
+    "👨‍⚕️", "👩‍⚕️", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🦄", "🐸", 
+    "🦉", "🐙", "🦋", "🍄", "🔥", "🚀", "💡", "🧠", "🫀", "💊", 
+    "💉", "🦠", "🧬", "🩺", "🚑", "🏥", "🐧", "🦈", "🦅", "🐺"
+]
+
 # --- CONFIGURAÇÃO DE FUSO HORÁRIO ---
 def get_brazil_time():
     return datetime.utcnow() - timedelta(hours=3)
@@ -21,28 +34,29 @@ def get_brazil_date():
     return get_brazil_time().date()
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="wide") 
+st.set_page_config(page_title="Enare Oficial", page_icon="🏥", layout="wide") 
 
 # --- CONEXÃO GOOGLE SHEETS ---
 def get_db_connection():
     scope = ['https://spreadsheets.google.com/feeds', 'https://www.googleapis.com/auth/drive']
     
     if "gcp_service_account" not in st.secrets:
-        st.error("⚠️ Secrets não configurados.")
+        st.error("⚠️ Secrets não configurados no Streamlit Cloud.")
         st.stop()
         
     creds_dict = st.secrets["gcp_service_account"]
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     
-    # Tenta conectar na planilha pelo nome (tenta com .csv e sem)
+    # Tenta conectar na planilha
+    # Tenta nomes diferentes para garantir que ache a sua
     try:
-        return client.open("enamed_db_v4.csv").sheet1
+        return client.open("enare_db").sheet1
     except:
         try:
-            return client.open("enamed_db_v4").sheet1
+            return client.open("enamed_db_v4.csv").sheet1
         except:
-            return client.open("enare_db").sheet1
+            return client.open("enamed_db_v4").sheet1
 
 # --- FUNÇÕES DE CARREGAMENTO E SALVAMENTO ---
 
@@ -95,14 +109,14 @@ def load_data():
             
         df = pd.DataFrame(data)
         
-        # --- CORREÇÃO CRÍTICA DE TIPOS (V18) ---
-        # Garante que colunas de Status sejam Lógica (True/False) e não Texto
+        # --- CORREÇÃO DE TIPOS DE DADOS (CRUCIAL PARA O ERRO TYPEERROR) ---
+        # Garante que colunas de Status sejam lidas como True/False
         for col in df.columns:
             if "_Status" in col:
-                # Converte "TRUE"/"FALSE" (texto do Google) para True/False (Python)
-                df[col] = df[col].astype(str).str.upper() == 'TRUE'
+                # Converte qualquer coisa que venha do Sheets em Booleano Python
+                df[col] = df[col].astype(str).apply(lambda x: x.upper() == 'TRUE')
         
-        # Garante que Semana e ID sejam números inteiros
+        # Garante que Semana e ID sejam números
         if "Semana" in df.columns:
             df["Semana"] = pd.to_numeric(df["Semana"], errors='coerce').fillna(0).astype(int)
         if "ID" in df.columns:
@@ -110,35 +124,26 @@ def load_data():
             
         return df
     except Exception as e:
-        st.error(f"Erro ao ler dados: {e}")
+        # Se der erro, retorna vazio mas não trava
         return pd.DataFrame()
 
 def save_data(df):
     try:
         sheet = get_db_connection()
-        sheet.clear()
-        # Converte Booleanos para String "TRUE"/"FALSE" antes de salvar para o Google entender
+        
+        # Prepara cópia para salvar (Python True -> Sheets "TRUE")
         df_save = df.copy()
         for col in df_save.columns:
             if "_Status" in col:
                 df_save[col] = df_save[col].apply(lambda x: "TRUE" if x else "FALSE")
                 
+        # Limpa e reescreve TUDO para garantir que novas colunas de usuários apareçam
+        sheet.clear()
         data_to_upload = [df_save.columns.values.tolist()] + df_save.values.tolist()
         sheet.update(range_name='A1', values=data_to_upload)
+        
     except Exception as e:
-        st.error(f"Erro ao salvar: {e}")
-
-# --- ARQUIVOS LOCAIS E VARIÁVEIS ---
-PROFILE_FILE = "profiles.json"
-CHAT_FILE = "chat_db.json"
-LINK_FILE = "drive_link.txt" # <--- REINSERIDO: CORRIGE O ERRO DA ABA MATERIAL
-DEFAULT_USERS = [] 
-
-AVATARS = [
-    "👨‍⚕️", "👩‍⚕️", "🦁", "🦊", "🐼", "🐨", "🐯", "🦖", "🦄", "🐸", 
-    "🦉", "🐙", "🦋", "🍄", "🔥", "🚀", "💡", "🧠", "🫀", "💊", 
-    "💉", "🦠", "🧬", "🩺", "🚑", "🏥", "🐧", "🦈", "🦅", "🐺"
-]
+        st.error(f"Erro crítico ao salvar no Google Sheets: {e}")
 
 # --- DADOS DO CRONOGRAMA ---
 RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
@@ -401,8 +406,10 @@ RAW_SCHEDULE = """Data,Dia,Semana_Estudo,Disciplina,Tema,Meta_Diaria
 
 def get_users_from_df(df):
     users = []
+    # Proteção: se df for None ou estiver vazio, retorna lista vazia
     if df is None or df.empty:
         return []
+    
     for col in df.columns:
         if col.endswith("_Status"):
             user_name = col.replace("_Status", "")
@@ -411,15 +418,15 @@ def get_users_from_df(df):
 
 def add_new_user(df, new_name):
     if df is None or df.empty:
-        st.error("Erro: Banco de dados desconectado. Tente recarregar a página.")
-        return df, False, "Erro de conexão."
+        st.error("Erro: Banco de dados desconectado. Recarregue a página.")
+        return df, False, "Erro conexão"
 
     if f"{new_name}_Status" in df.columns:
         return df, False, "Esse nome já existe!"
         
     df[f"{new_name}_Status"] = False
     df[f"{new_name}_Date"] = None
-    save_data(df) 
+    save_data(df) # SALVA NA NUVEM IMEDIATAMENTE
     return df, True, "Usuário criado com sucesso!"
 
 # --- PERSISTÊNCIA LINK ---
