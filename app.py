@@ -983,10 +983,6 @@ with tab4:
             st.rerun()
         st.info("Para resetar o banco de dados principal, limpe a planilha no Google Drive.")
 
-with tab5:
-    st.markdown("## 📚 Manual do Usuário Enare")
-    st.markdown("""<div class="warning-box"><strong>⚠️ PRÉ-REQUISITO OBRIGATÓRIO</strong><br>Este aplicativo é um <strong>GUIA DE ESTUDOS</strong>. Ele não contém os vídeos/PDFs hospedados aqui.<br></div>""", unsafe_allow_html=True)
-
 # ABA 5: TUTORIAL
 with tab5:
     st.markdown("<h2 style='text-align: center; color: #333;'>🎓 Guia de Sobrevivência Enare</h2>", unsafe_allow_html=True)
