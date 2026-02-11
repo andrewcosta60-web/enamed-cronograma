@@ -971,24 +971,107 @@ with tab3:
 
 # ABA 4: ADMIN
 with tab4:
-    st.header("⚙️ Administração")
-    if "admin_unlocked" not in st.session_state: st.session_state["admin_unlocked"] = False
+    st.header("⚙️ Central de Comando")
+    
+    if "admin_unlocked" not in st.session_state: 
+        st.session_state["admin_unlocked"] = False
+        
     if not st.session_state["admin_unlocked"]:
         senha = st.text_input("Senha Admin:", type="password")
-        if senha == "UNIARP": st.session_state["admin_unlocked"] = True; st.rerun()
+        if st.button("Acessar"):
+            if senha == "UNIARP": 
+                st.session_state["admin_unlocked"] = True
+                st.rerun()
+            else:
+                st.error("Senha incorreta.")
     else:
-        st.success("🔓 Liberado")
+        st.success("🔓 Painel Liberado")
         
-        # Botão corrigido: Apaga apenas o Chat (que é local)
-        if st.button("🗑️ LIMPAR CHAT (LOCAL)", type="primary"):
-            if os.path.exists("chat_db.json"): 
-                os.remove("chat_db.json")
-            st.success("Chat reiniciado!")
-            st.rerun()
+        # --- ÁREA 1: GERENCIAR USUÁRIOS ---
+        st.subheader("👤 Gerenciar Usuários")
+        
+        # Lista atual de usuários
+        current_users = get_users_from_df(df)
+        
+        if not current_users:
+            st.info("Nenhum usuário cadastrado no momento.")
+        else:
+            col_sel, col_btn_del = st.columns([3, 1])
+            with col_sel:
+                user_to_delete = st.selectbox("Selecione um usuário para excluir:", ["Selecione..."] + current_users)
             
-        st.info("ℹ️ **Nota:** Os Usuários, Fotos e Progresso estão salvos na nuvem (Google Sheets). Para resetar um usuário, apague a linha dele diretamente na sua planilha.")
+            with col_btn_del:
+                st.write("") # Espaçamento
+                st.write("") 
+                if st.button("🗑️ Excluir", type="secondary"):
+                    if user_to_delete and user_to_delete != "Selecione...":
+                        with st.spinner(f"Apagando {user_to_delete}..."):
+                            # 1. Remove colunas da Planilha Principal (Progresso)
+                            try:
+                                # Remove colunas do DataFrame localmente
+                                cols_to_drop = [f"{user_to_delete}_Status", f"{user_to_delete}_Date"]
+                                df_new = df.drop(columns=[c for c in cols_to_drop if c in df.columns])
+                                # Salva o DataFrame "limpo" de volta na planilha
+                                save_data(df_new)
+                            except Exception as e:
+                                st.error(f"Erro ao limpar progresso: {e}")
+
+                            # 2. Remove linha da Planilha de Perfis (Login/Foto)
+                            try:
+                                sh = get_sheet_instance()
+                                ws = sh.worksheet("profiles")
+                                cell = ws.find(user_to_delete)
+                                if cell:
+                                    ws.delete_rows(cell.row)
+                            except Exception as e:
+                                st.warning(f"Perfil já não existia ou erro: {e}")
+                                
+                            st.success(f"Adeus, {user_to_delete}! Dados apagados.")
+                            st.rerun()
+
+        st.divider()
+
+        # --- ÁREA 2: MANUTENÇÃO ---
+        st.subheader("🛠️ Manutenção do Sistema")
         
-        if st.button("🔒 Sair"): st.session_state["admin_unlocked"] = False; st.rerun()
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            if st.button("💬 Limpar Chat (Local)"):
+                if os.path.exists("chat_db.json"): 
+                    os.remove("chat_db.json")
+                st.success("Chat reiniciado!")
+                st.rerun()
+                
+        with c2:
+            # BOTÃO DE PÂNICO - APAGA TUDO
+            if st.button("☢️ FORMATAR APP (Apagar Tudo)", type="primary"):
+                with st.spinner("Formatando banco de dados..."):
+                    try:
+                        sh = get_sheet_instance()
+                        
+                        # 1. Zera Planilha Principal
+                        init_db_online(sh.sheet1)
+                        
+                        # 2. Zera Planilha de Perfis
+                        try:
+                            ws = sh.worksheet("profiles")
+                            ws.clear()
+                            ws.append_row(["Username", "Avatar_Data"])
+                        except: pass
+                        
+                        # 3. Zera Chat Local
+                        if os.path.exists("chat_db.json"): os.remove("chat_db.json")
+                        
+                        st.success("O sistema foi resetado para o padrão de fábrica!")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Erro fatal: {e}")
+
+        st.divider()
+        if st.button("🔒 Sair do Admin"): 
+            st.session_state["admin_unlocked"] = False
+            st.rerun()
             
 # ABA 5: TUTORIAL
 with tab5:
