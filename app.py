@@ -21,7 +21,7 @@ def get_brazil_date():
     return get_brazil_time().date()
 
 # --- CONFIGURAÇÃO DA PÁGINA ---
-st.set_page_config(page_title="Enare Oficial", page_icon="🏥", layout="wide") 
+st.set_page_config(page_title="Enamed Oficial", page_icon="🏥", layout="wide") 
 
 # --- CONEXÃO GOOGLE SHEETS ---
 def get_db_connection():
@@ -35,7 +35,7 @@ def get_db_connection():
     creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
     client = gspread.authorize(creds)
     
-    # Tenta conectar na planilha
+    # Tenta conectar na planilha pelo nome (tenta com .csv e sem)
     try:
         return client.open("enamed_db_v4.csv").sheet1
     except:
@@ -95,14 +95,14 @@ def load_data():
             
         df = pd.DataFrame(data)
         
-        # --- CORREÇÃO DE TIPOS DE DADOS (CRUCIAL) ---
-        # Converte colunas de Status (Texto -> Booleano)
+        # --- CORREÇÃO CRÍTICA DE TIPOS (V18) ---
+        # Garante que colunas de Status sejam Lógica (True/False) e não Texto
         for col in df.columns:
             if "_Status" in col:
-                # Transforma "TRUE"/"FALSE" (texto) em True/False (lógica)
-                df[col] = df[col].astype(str).apply(lambda x: x.upper() == 'TRUE')
+                # Converte "TRUE"/"FALSE" (texto do Google) para True/False (Python)
+                df[col] = df[col].astype(str).str.upper() == 'TRUE'
         
-        # Garante que Semana e ID sejam números
+        # Garante que Semana e ID sejam números inteiros
         if "Semana" in df.columns:
             df["Semana"] = pd.to_numeric(df["Semana"], errors='coerce').fillna(0).astype(int)
         if "ID" in df.columns:
@@ -110,14 +110,14 @@ def load_data():
             
         return df
     except Exception as e:
-        st.error(f"Erro ao processar dados da planilha: {e}")
+        st.error(f"Erro ao ler dados: {e}")
         return pd.DataFrame()
 
 def save_data(df):
     try:
         sheet = get_db_connection()
         sheet.clear()
-        # Converte Booleanos para String antes de salvar para evitar erros
+        # Converte Booleanos para String "TRUE"/"FALSE" antes de salvar para o Google entender
         df_save = df.copy()
         for col in df_save.columns:
             if "_Status" in col:
@@ -128,9 +128,10 @@ def save_data(df):
     except Exception as e:
         st.error(f"Erro ao salvar: {e}")
 
-# --- ARQUIVOS LOCAIS ---
+# --- ARQUIVOS LOCAIS E VARIÁVEIS ---
 PROFILE_FILE = "profiles.json"
 CHAT_FILE = "chat_db.json"
+LINK_FILE = "drive_link.txt" # <--- REINSERIDO: CORRIGE O ERRO DA ABA MATERIAL
 DEFAULT_USERS = [] 
 
 AVATARS = [
@@ -482,31 +483,158 @@ def delete_chat_message(msg_id):
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Varela+Round&display=swap');
-    html, body, [class*="css"] { font-family: 'Varela Round', sans-serif; }
+    
+    html, body, [class*="css"] {
+        font-family: 'Varela Round', sans-serif;
+    }
+    
+    /* === TRADUÇÃO UPLOAD (PORTUGUÊS) === */
     [data-testid="stFileUploaderDropzoneInstructions"] > div > span { display: none; }
-    [data-testid="stFileUploaderDropzoneInstructions"] > div::after { content: "Arraste sua foto aqui"; font-size: 14px; color: #888; font-weight: bold; display: block; margin-top: -10px; }
+    [data-testid="stFileUploaderDropzoneInstructions"] > div::after {
+        content: "Arraste sua foto aqui ou clique para buscar";
+        font-size: 14px; color: #888; font-weight: bold; display: block; margin-top: -10px;
+    }
     [data-testid="stFileUploaderDropzoneInstructions"] > div > small { display: none; }
-    button[kind="primary"] { background-color: #58cc02 !important; border-color: #58cc02 !important; color: white !important; border-radius: 12px !important; font-weight: bold !important; box-shadow: 0 4px 0 rgba(0,0,0,0.1); transition: all 0.1s; }
-    button[kind="primary"]:active { box-shadow: none; transform: translateY(2px); }
-    button[kind="secondary"] { border-radius: 12px !important; font-weight: bold !important; border: 1px solid #e0e0e0 !important; }
-    section[data-testid="stSidebar"] button[kind="secondary"] { border: none !important; background: transparent !important; box-shadow: none !important; padding: 0px !important; color: #bbb !important; margin-top: 5px !important; }
-    section[data-testid="stSidebar"] button[kind="secondary"]:hover { color: #ff4b4b !important; background: transparent !important; }
-    .chat-msg-container { display: flex; gap: 8px; align-items: center; font-size: 12px; width: 100%; margin-bottom: 2px; }
-    .chat-avatar-img { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0; }
-    .chat-avatar-emoji { width: 28px; height: 28px; font-size: 18px; text-align: center; flex-shrink: 0; }
-    .chat-bubble { background-color: #f0f2f6; padding: 8px 12px; border-radius: 12px; border-top-left-radius: 0px; flex-grow: 1; color: #333; line-height: 1.4; }
-    .chat-header { font-size: 10px; color: #888; margin-bottom: 2px; display: flex; justify-content: space-between; }
+    
+    /* === BOTÕES VERDES (PRIMÁRIOS) === */
+    button[kind="primary"] {
+        background-color: #58cc02 !important;
+        border-color: #58cc02 !important;
+        color: white !important;
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+        transition: all 0.1s;
+    }
+    button[kind="primary"]:active {
+        box-shadow: none;
+        transform: translateY(2px);
+    }
+
+    /* === BOTÕES SECUNDÁRIOS (PADRÃO) === */
+    button[kind="secondary"] {
+        border-radius: 12px !important;
+        font-weight: bold !important;
+        border: 1px solid #e0e0e0 !important;
+    }
+
+    /* === LIXEIRA INVISÍVEL NO CHAT (SIDEBAR) === */
+    /* Remove fundo e borda APENAS dos botões secundários da barra lateral (Lixeira) */
+    /* Nota: O botão de Sair e Atualizar devem ser Primários para não sumirem */
+    section[data-testid="stSidebar"] button[kind="secondary"] {
+        border: none !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        padding: 0px !important;
+        color: #bbb !important; /* Cinza claro */
+        margin-top: 5px !important;
+    }
+    section[data-testid="stSidebar"] button[kind="secondary"]:hover {
+        color: #ff4b4b !important; /* Vermelho ao passar o mouse */
+        background: transparent !important;
+    }
+
+    /* === CHAT VISUAL === */
+    .chat-msg-container {
+        display: flex;
+        gap: 8px;
+        align-items: center; /* Alinha foto, texto e botão no centro vertical */
+        font-size: 12px;
+        width: 100%;
+        margin-bottom: 2px;
+    }
+    .chat-avatar-img {
+        width: 28px; height: 28px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd; flex-shrink: 0;
+    }
+    .chat-avatar-emoji {
+        width: 28px; height: 28px; font-size: 18px; text-align: center; flex-shrink: 0;
+    }
+    .chat-bubble {
+        background-color: #f0f2f6;
+        padding: 8px 12px;
+        border-radius: 12px;
+        border-top-left-radius: 0px;
+        flex-grow: 1;
+        color: #333;
+        line-height: 1.4;
+    }
+    .chat-header {
+        font-size: 10px; color: #888; margin-bottom: 2px; display: flex; justify-content: space-between;
+    }
     .chat-header strong { color: #58cc02; }
-    .profile-container-custom { display: flex; justify-content: center; align-items: center; width: 100%; margin-top: 5px !important; margin-bottom: 10px !important; }
-    .profile-img-fixed { width: 160px !important; height: 160px !important; min-width: 160px !important; max-width: 160px !important; border-radius: 50%; object-fit: cover; border: 4px solid #58cc02; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-    .profile-emoji-fixed { font-size: 100px !important; line-height: 1 !important; text-align: center; margin-top: 10px; }
-    .profile-name { text-align: center; font-weight: 900; font-size: 22px !important; color: white !important; text-shadow: 0 2px 5px rgba(0,0,0,0.8); margin-bottom: 10px !important; margin-top: 5px !important; }
-    .xp-box { background-color: #262730; border: 1px solid #444; border-radius: 10px; padding: 5px; text-align: center; margin-top: 0px; margin-bottom: 10px; }
+
+    /* === PERFIL SIDEBAR (V18 - MENOR E MAIS ALTO) === */
+    
+    /* Container para centralizar tudo - Margens reduzidas */
+    .profile-container-custom {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        margin-top: 5px !important; /* Subiu o topo */
+        margin-bottom: 10px !important; /* Reduziu espaço abaixo */
+    }
+
+    /* FOTO: Tamanho reduzido para 160px (antes era 200px) */
+    .profile-img-fixed {
+        width: 160px !important;
+        height: 160px !important;
+        min-width: 160px !important;
+        max-width: 160px !important;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #58cc02;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    /* EMOJI */
+    .profile-emoji-fixed {
+        font-size: 100px !important;
+        line-height: 1 !important;
+        text-align: center;
+        margin-top: 10px;
+    }
+    
+    /* NOME: Mais próximo da foto */
+    .profile-name {
+        text-align: center;
+        font-weight: 900;
+        font-size: 22px !important;
+        color: white !important;
+        text-shadow: 0 2px 5px rgba(0,0,0,0.8);
+        margin-bottom: 10px !important; /* Menos espaço para o botão sair */
+        margin-top: 5px !important;
+    }
+    
+    /* XP Box - Mais compacta */
+    .xp-box {
+        background-color: #262730; border: 1px solid #444; border-radius: 10px;
+        padding: 5px; text-align: center; margin-top: 0px; margin-bottom: 10px;
+    }
     .xp-val { font-size: 22px; font-weight: bold; color: #58cc02; line-height: 1.2; }
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"] { border: 1px solid #0099ff !important; background-color: rgba(0, 153, 255, 0.1) !important; color: #0099ff !important; font-size: 16px !important; padding: 2px 8px !important; height: auto !important; }
-    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover { background-color: #0099ff !important; color: white !important; }
+
+    /* === BOTÃO DE ATUALIZAR AZUL (Personalizado) === */
+    /* Afeta apenas o botão dentro da coluna específica do chat */
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"] {
+        border: 1px solid #0099ff !important;
+        background-color: rgba(0, 153, 255, 0.1) !important;
+        color: #0099ff !important;
+        font-size: 16px !important;
+        padding: 2px 8px !important;
+        height: auto !important;
+    }
+    div[data-testid="stHorizontalBlock"] button[kind="secondary"]:hover {
+        background-color: #0099ff !important;
+        color: white !important;
+    }
+    
+    /* === OUTROS === */
     .stProgress > div > div > div > div { background-color: #58cc02; }
-    .dash-card { background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px; text-align: center; border: 1px solid #dcdcdc; height: 100%; display: flex; flex-direction: column; justify-content: center; }
+    .dash-card {
+        background-color: #f0f2f6 !important; border-radius: 8px; padding: 8px 15px;
+        text-align: center; border: 1px solid #dcdcdc; height: 100%;
+        display: flex; flex-direction: column; justify-content: center;
+    }
     .dash-label { font-size: 11px !important; font-weight: bold !important; color: #333 !important; text-transform: uppercase; }
     .dash-value { font-size: 16px !important; font-weight: 900 !important; color: #000 !important; }
     .custom-title { font-size: 40px; font-weight: bold; margin-bottom: 0px; padding-bottom: 0px; line-height: 1.2; }
@@ -672,11 +800,16 @@ if not df.empty:
 
     total_tasks = len(df)
     if f"{current_user}_Status" in df.columns:
-        tasks_done = df[f"{current_user}_Status"].sum() 
+        # CORREÇÃO: Garante que estamos somando números (inteiros), não texto
+        tasks_done = df[f"{current_user}_Status"].astype(int).sum() 
     else:
         tasks_done = 0
         
-    pct_completo = (tasks_done / total_tasks) * 100 if total_tasks > 0 else 0
+    # CORREÇÃO: Evita divisão por zero
+    if total_tasks > 0:
+        pct_completo = (tasks_done / total_tasks) * 100
+    else:
+        pct_completo = 0
 else:
     status_cronograma = "Carregando..."
     total_tasks, tasks_done, pct_completo = 0, 0, 0
