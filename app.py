@@ -173,13 +173,49 @@ def add_new_user(df, new_name):
     save_data(df) # Salva a estrutura na nuvem
     return df, True, "Sucesso"
 
-# --- PERSISTÊNCIA LINK ---
+# --- PERSISTÊNCIA LINK (AGORA NO GOOGLE SHEETS - ABA 'CONFIG') ---
 def get_saved_link():
-    if os.path.exists(LINK_FILE):
-        with open(LINK_FILE, "r") as f: return f.read().strip()
-    return ""
+    try:
+        sh = get_sheet_instance()
+        try:
+            ws = sh.worksheet("config")
+        except:
+            # Se a aba não existir, cria e já retorna vazio
+            ws = sh.add_worksheet(title="config", rows="20", cols="5")
+            ws.append_row(["Setting", "Value"])
+            ws.append_row(["drive_link", ""])
+            return ""
+            
+        # Procura a linha onde está escrito 'drive_link' na coluna A
+        cell = ws.find("drive_link")
+        if cell:
+            # Retorna o valor que está na coluna B (ao lado)
+            return ws.cell(cell.row, 2).value or ""
+        else:
+            return ""
+    except:
+        return ""
+
 def save_drive_link_file(new_link):
-    with open(LINK_FILE, "w") as f: f.write(new_link)
+    try:
+        sh = get_sheet_instance()
+        try:
+            ws = sh.worksheet("config")
+        except:
+            ws = sh.add_worksheet(title="config", rows="20", cols="5")
+            ws.append_row(["Setting", "Value"])
+        
+        # Procura onde salvar
+        cell = ws.find("drive_link")
+        if cell:
+            # Atualiza coluna B
+            ws.update_cell(cell.row, 2, new_link)
+        else:
+            # Se não achar, cria nova linha
+            ws.append_row(["drive_link", new_link])
+            
+    except Exception as e:
+        st.error(f"Erro ao salvar link na nuvem: {e}")
 
 # --- UTILS IMAGEM ---
 def image_to_base64(image):
